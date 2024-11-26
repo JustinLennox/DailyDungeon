@@ -2,7 +2,7 @@ import { Devvit, useAsync, useState, Comment, useInterval } from '@devvit/public
 import { CommentView } from './CommentView.js';
 import { DiceRollView } from './DiceRollView.js';
 import { TabsView } from './TabView.js';
-import { TabType } from '../utils/utils.js';
+import { getRelativeTime, TabType } from '../utils/utils.js';
 
 export const App = (context: Devvit.Context): JSX.Element => {
 
@@ -49,7 +49,8 @@ export const App = (context: Devvit.Context): JSX.Element => {
       const allComments = await comments.all();
       const topComment = allComments[0];
       console.log("loaded top comment: ", topComment);
-      return topComment ? JSON.stringify(topComment) : null;
+      const editedComment = { ...topComment, dateString: getRelativeTime(topComment.createdAt) };
+      return editedComment ? JSON.stringify(editedComment) : null;
     },
     { depends: [gameData?.postID] }
   );
