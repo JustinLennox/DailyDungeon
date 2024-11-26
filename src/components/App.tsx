@@ -48,9 +48,13 @@ export const App = (context: Devvit.Context): JSX.Element => {
       });
       const allComments = await comments.all();
       const topComment = allComments[0];
-      console.log("loaded top comment: ", topComment);
+      if (!topComment) {
+        console.log("No top comment loaded");
+        return null;
+      }
+      console.log("loaded top comment: ", topComment.body);
       const editedComment = { ...topComment, dateString: getRelativeTime(topComment.createdAt) };
-      return editedComment ? JSON.stringify(editedComment) : null;
+      return JSON.stringify(editedComment);
     },
     { depends: [gameData?.postID] }
   );
@@ -75,22 +79,32 @@ export const App = (context: Devvit.Context): JSX.Element => {
   // Render the component
   return (
     <zstack width={100} height={100} padding='none' gap='none' alignment='center middle'>
-      <vstack padding="medium" cornerRadius="medium" gap="medium" alignment="center" width={100} height={100}>
+      <vstack padding="small" cornerRadius="medium" gap="small" alignment="center" width={100} height={100}>
         {TabsView(context, gameData, selectedTab, setSelectedTab)}
         {/* Loading and error states for game data */}
-        {loadingAllGamesData && <text>Loading game data...</text>}
-        {allGamesDataError && <text>Error loading game data.</text>}
+        {loadingAllGamesData && <text wrap>Loading game data...</text>}
+        {allGamesDataError && <text wrap>Error loading game data.</text>}
+
+        <spacer grow />
 
         {/* Game View */}
-        {allGamesData && gameData && (
-          <vstack padding="medium" cornerRadius="medium" gap="medium" alignment="center">
-            <text style="heading" size="large">
-              The Story Thus Far…
-            </text>
-            <text>{gameData.text}</text>
+        {gameData && (
+          <vstack padding="medium" cornerRadius="medium" gap="small" minWidth={50} backgroundColor='black'>
+            {/* {((context.dimensions?.width ?? 0) > 500) && (<hstack>
+              <text wrap weight='bold' size='small' color='gray'>
+                From the dungeon…
+              </text>
+              <spacer grow />
+            </hstack>)} */}
+            <vstack alignment='center middle' padding='small'>
+              <text wrap style='heading' alignment='center middle' color='white' width={100}>{gameData.text}</text>
+            </vstack>
           </vstack>
         )}
+
         {!loadingTopComment && topCommentJSON && CommentView(context, JSON.parse(topCommentJSON))}
+
+        <spacer grow />
 
         {/* HStack with button and dice icon */}
         <hstack gap="small" alignment="center" width={100} grow>

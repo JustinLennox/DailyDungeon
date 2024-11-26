@@ -12,7 +12,7 @@ export const CreatePreview = (): JSX.Element => {
         imageWidth={'240px'}
       />
       <spacer size="small" />
-      <text size="large" weight="bold">
+      <text wrap size="large" weight="bold">
         Loading The Dungeon…
       </text>
     </vstack>

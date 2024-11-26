@@ -100,7 +100,7 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 						onPress={() => { setShowDiceView(false) }}
 					/>
 					<spacer grow />
-					<text style='heading'>
+					<text wrap style='heading'>
 						{!loadingUserRoll && !userRollError && userRoll ? `You rolled a ${userRoll}!` : "Rolling…"}
 					</text>
 					<spacer grow />
@@ -117,7 +117,7 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 				{/* Display dice roll totals */}
 				{(userRollError || userRoll) && topRolls &&
 					<hstack>
-						<text>{`Today's Top Roll: ${topRolls.topRoll} (${topRolls.topCount} users)`}</text>
+						<text wrap>{`Today's Top Roll: ${topRolls.topRoll} (${topRolls.topCount} users)`}</text>
 					</hstack>
 				}
 			</vstack>
