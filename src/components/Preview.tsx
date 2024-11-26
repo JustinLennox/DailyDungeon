@@ -13,7 +13,7 @@ export const CreatePreview = (): JSX.Element => {
       />
       <spacer size="small" />
       <text size="large" weight="bold">
-        Loading Reddit Plays DnD…
+        Loading The Dungeon…
       </text>
     </vstack>
   );

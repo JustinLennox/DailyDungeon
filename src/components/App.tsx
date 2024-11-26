@@ -1,11 +1,14 @@
 import { Devvit, useAsync, useState, Comment, useInterval } from '@devvit/public-api';
 import { CommentView } from './CommentView.js';
 import { DiceRollView } from './DiceRollView.js';
+import { TabsView } from './TabView.js';
+import { TabType } from '../utils/utils.js';
 
 export const App = (context: Devvit.Context): JSX.Element => {
 
-  // State for showing the dice roll view
-	const [showDiceRoller, setShowDiceRoller] = useState(false);
+  const [showDiceRoller, setShowDiceRoller] = useState(false);
+
+  const [selectedTab, setSelectedTab] = useState(TabType.main);
 
   // Fetch game data from Redis
   const {
@@ -53,13 +56,18 @@ export const App = (context: Devvit.Context): JSX.Element => {
 
   const castVoteButtonPressed = async () => {
     try {
-      if (gameData && gameData.postID) {
-        const post = await context.reddit.getPostById(gameData.postID);
-        console.log("Navigating to post: ", post.id);
+      context.ui.showToast(`WHYYY... is there a context??: ${context}`);
+      const redditPostID = context.postId;
+      if (redditPostID) {
+        const post = await context.reddit.getPostById(redditPostID);
+        context.ui.showToast(`Navigating to post: ${redditPostID}`);
         context.ui.navigateTo(post);
+      } else {
+        context.ui.showToast(`No reddit post ID`);
       }
     } catch (e) {
       console.error("Cast vote failed: ", e);
+      context.ui.showToast(`${e}`);
     }
   }
 
@@ -67,6 +75,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
   return (
     <zstack width={100} height={100} padding='none' gap='none' alignment='center middle'>
       <vstack padding="medium" cornerRadius="medium" gap="medium" alignment="center" width={100} height={100}>
+        {TabsView(context, gameData, selectedTab, setSelectedTab)}
         {/* Loading and error states for game data */}
         {loadingAllGamesData && <text>Loading game data...</text>}
         {allGamesDataError && <text>Error loading game data.</text>}
@@ -87,7 +96,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
           <button
             appearance="primary"
             grow
-            onPress={() => { castVoteButtonPressed() }}
+            onPress={async () => { await castVoteButtonPressed() }}
           >
             Cast your vote!
           </button>

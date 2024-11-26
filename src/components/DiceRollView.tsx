@@ -22,14 +22,12 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 				const user = await context.reddit.getCurrentUser();
 				const userID = user?.id ?? "anonymous";
 				const postUserRollsKey = `userRolls:${gameData.postID}`;
-				context.ui.showToast(`Game id ${gameData.postID}, userID ${userID}`);
 				if (user) {
 					// Check if the user has already rolled the dice for the latest post ID
 					const userRolled = await context.redis.hGet(postUserRollsKey, userID);
-					context.ui.showToast(`Stored roll: ${userRolled}`);
 					const roll = userRolled ? parseInt(userRolled) : NaN;
 					if (userRolled && !Number.isNaN(roll)) {
-						context.ui.showToast(`You have already rolled ${roll} for this post.`);
+						// context.ui.showToast(`You have already rolled ${roll} for this post.`);
 						return roll;
 					}
 				} else {
@@ -47,7 +45,6 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 				userRollIncr[userID] = diceRoll.toString()
 
 				await context.redis.hSet(postUserRollsKey, userRollIncr);
-				context.ui.showToast(`Setting ${userRollIncr} for ${postUserRollsKey}`);
 				await context.redis.expire(postUserRollsKey, ExpireTime.day);
 
 				// Save back to Redis
@@ -57,7 +54,7 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 				return diceRoll;
 			} catch (e) {
 				console.error('Error during dice roll:', e);
-				context.ui.showToast(`${e}`);
+				context.ui.showToast(`An error occurred rolling the dice. (${e})`);
 				throw new Error('dice-error');
 			}
 		}, { depends: [gameData?.postID] }
@@ -96,16 +93,18 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 	return (
 		<vstack alignment='center middle' height={100}>
 			<vstack backgroundColor='neutral-background' padding="medium" cornerRadius="medium" gap="medium" alignment="center">
-				<hstack alignment='center middle'>
+				<hstack alignment='center middle' width={100}>
 					<button
+						size='small'
 						icon="close-fill"
 						onPress={() => { setShowDiceView(false) }}
 					/>
 					<spacer grow />
-					<text>
+					<text style='heading'>
 						{!loadingUserRoll && !userRollError && userRoll ? `You rolled a ${userRoll}!` : "Rolling…"}
 					</text>
 					<spacer grow />
+					<spacer width={'20px'}/>
 				</hstack>
 				{!userRollError &&
 					<image

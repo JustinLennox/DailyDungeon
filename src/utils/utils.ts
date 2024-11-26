@@ -1,5 +1,10 @@
 import { RedisClient } from "@devvit/public-api";
 
+export enum TabType {
+	main,
+	past
+};
+
 export interface StringDictionary {
 	[key: string]: string;
 }
