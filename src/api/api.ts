@@ -1,6 +1,7 @@
 import { Devvit, JobContext, MediaPlugin, RedditAPIClient, RedisClient, ScheduledCronJob, ScheduledJob, Scheduler, UIClient, useForm } from '@devvit/public-api';
 import { CreatePreview } from '../components/Preview.js';
 import { a } from 'vitest/dist/suite-IbNSsUWN.js';
+import { StringDictionary } from '../utils/utils.js';
 
 // const DEFAULT_REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 const DEFAULT_REFRESH_INTERVAL = 60000;
@@ -10,7 +11,7 @@ export const fetchGame = async (subredditName: string, redis: RedisClient) => {
 	try {
 		// Construct the full URL with all query parameters
 		const url = `https://gwamps-quest-default-rtdb.firebaseio.com/RedditPlaysDnD/${subredditName}.json`;
-		console.log("Fetching from url: ", url);
+		console.log("Fetching game from: ", url);
 		const response = await fetch(url, {
 			method: 'get',
 			headers: {
@@ -31,45 +32,33 @@ export const fetchGame = async (subredditName: string, redis: RedisClient) => {
 
 export const createPost = async (context: Devvit.Context | JobContext, ui: UIClient | undefined) => {
 	try {
+		ui?.showToast("Creating post, hang tight...");
 		const subreddit = await context.reddit.getCurrentSubreddit();
 
 		// Firebase database URL to fetch the current game data
 		const gameUrl = `https://gwamps-quest-default-rtdb.firebaseio.com/RedditPlaysDnD/${subreddit.name}/games/${subreddit.name}.json`;
 
-		let title = `${subreddit.name} Plays DnD`;
-		let currentDay = 1; // Default to Day 1 if currentDay doesn't exist
-		let gameData;
-
-		// Fetch the current game data from Firebase
-		try {
-			const response = await fetch(gameUrl, {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json'
-				}
-			});
-
-			if (response.ok) {
-				gameData = await response.json();
-				if (gameData && Object.keys(gameData).length > 0) {
-					// Game exists
-					console.log('Game already exists in Firebase');
-					currentDay = gameData.currentDay || 1;
-				} else {
-					// Game data doesn't exist, will create new game
-					console.log('Game data does not exist, will create new game in Firebase');
-				}
-			} else {
-				console.error(`Failed to fetch game data: ${response.status}`);
-				return;
+		const response = await fetch(gameUrl, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json'
 			}
-		} catch (error) {
-			console.error('Error fetching game data:', error);
-			throw error;
+		});
+
+		if (!response.ok) {
+			throw new Error(`Fetch game failed error: ${response.status}, ${response.statusText}`);
+		}
+		const gameData = await response.json();
+		if (!gameData || Object.keys(gameData).length <= 0 || gameData.currentDay == null) {
+			throw new Error(`Failed to load game data from response json`);
+		}
+		// Update the title to include the current day
+		const currentDay = gameData.currentDay + 1;
+		if (!gameData.contentArray || !gameData.contentArray[currentDay]) {
+			throw new Error(`No next day for current day ${currentDay} and data ${gameData}`);
 		}
 
-		// Update the title to include the current day
-		title = `${subreddit.name} Plays DnD: Day ${currentDay}`;
+		const title = `${subreddit.name} Plays DnD: Day ${currentDay}`;
 
 		// Create the Reddit post with the updated title
 		const post = await context.reddit.submitPost({
@@ -79,62 +68,43 @@ export const createPost = async (context: Devvit.Context | JobContext, ui: UICli
 			subredditName: subreddit.name,
 		});
 
-		// Retrieve the post ID and createdAt
 		const postID = post.id;
-		const postCreatedAt = new Date().toISOString(); // Use current time if post.createdAt is not available
-
-		// const refreshInterval = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-		const refreshInterval = 60000; // 1 minute in milliseconds
-
+		const postCreatedAt = new Date().toISOString();
 
 		// Prepare the content array item
-		const contentItem = {
-			text: 'What is your name adventurer?',
+		const contentUpdate = {
 			postID: postID,
 			postCreatedAt: postCreatedAt,
-			refreshInterval: refreshInterval
 		};
 
-		// If game doesn't exist, create new game data
-		if (!gameData || Object.keys(gameData).length === 0) {
-			const data = {
-				latestPostID: postID,
-				currentDay: currentDay,
-				ended: false,
-				contentArray: [contentItem]
-			};
+		// Step 2: Update the contentArray
+		let contentArray = gameData.contentArray || [];
+		contentArray.push(contentUpdate);
 
-			// Send a PUT request to Firebase to create new game data
-			await fetch(gameUrl, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(data)
-			});
+		// Step 3: Update the posts object
+		let posts = gameData.posts || {};
+		posts[postID] = currentDay;
 
-			console.log("Successfully created new game in Firebase");
-		} else {
-			// Game exists, update latestPostID
-			gameData.latestPostID = postID;
+		// Step 4: Prepare the updates object
+		const updates = {
+			contentArray: contentArray,
+			latestPostID: postID,
+			posts: posts,
+		};
 
-			// Append new contentItem to contentArray
-			if (!gameData.contentArray) {
-				gameData.contentArray = [];
-			}
-			gameData.contentArray.push(contentItem);
+		// Step 5: Make a PATCH request to update the data
+		const patchResponse = await fetch(`${gameUrl}`, {
+			method: 'PATCH',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(updates),
+		});
 
-			// Update the game data in Firebase
-			await fetch(gameUrl, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(gameData)
-			});
-
-			console.log("Successfully updated game in Firebase");
+		if (!patchResponse.ok) {
+			throw new Error(`Error updating data: ${patchResponse.statusText}`);
 		}
+		console.log("Successfully updated game in Firebase");
 
 		if (ui) {
 			ui.showToast({
