@@ -1,19 +1,24 @@
-import { Devvit, JobContext, MediaPlugin, RedditAPIClient, RedisClient, ScheduledCronJob, ScheduledJob, Scheduler, UIClient, useForm } from '@devvit/public-api';
+import { Comment, Devvit, JobContext, MediaPlugin, RedditAPIClient, RedisClient, ScheduledCronJob, ScheduledJob, Scheduler, UIClient, useForm } from '@devvit/public-api';
 import { CreatePreview } from '../components/Preview.js';
-import { a } from 'vitest/dist/suite-IbNSsUWN.js';
 import { StringDictionary } from '../utils/utils.js';
 
 // const DEFAULT_REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 const DEFAULT_REFRESH_INTERVAL = 60000;
 
-export const fetchGame = async (subredditName: string, redis: RedisClient) => {
+const baseURL = "https://gwamps-quest-default-rtdb.firebaseio.com/RedditPlaysDnD"
+
+const getGameURL = (subredditName: string): string => {
+	return `${baseURL}/${subredditName}/games/${subredditName}.json`;
+}
+
+export const fetchGame = async (subredditName: string): Promise<any | null> => {
 	console.log("Fetching game for ", subredditName);
 	try {
 		// Construct the full URL with all query parameters
-		const url = `https://gwamps-quest-default-rtdb.firebaseio.com/RedditPlaysDnD/${subredditName}.json`;
+		const url = getGameURL(subredditName);
 		console.log("Fetching game from: ", url);
 		const response = await fetch(url, {
-			method: 'get',
+			method: 'GET',
 			headers: {
 				'accept': 'application/json',
 			},
@@ -26,7 +31,7 @@ export const fetchGame = async (subredditName: string, redis: RedisClient) => {
 		const responseJSON = await response.json();
 		console.log("Fetch info succeeded: ", responseJSON);
 	} catch (e) {
-		console.log("Failed to fetch game info: ", e);
+		console.error("Failed to fetch game info: ", e);
 	}
 }
 
@@ -34,31 +39,22 @@ export const createPost = async (context: Devvit.Context | JobContext, ui: UICli
 	try {
 		ui?.showToast("Creating post, hang tight...");
 		const subreddit = await context.reddit.getCurrentSubreddit();
+		const gameData = await fetchGame(subreddit.name);
 
-		// Firebase database URL to fetch the current game data
-		const gameUrl = `https://gwamps-quest-default-rtdb.firebaseio.com/RedditPlaysDnD/${subreddit.name}/games/${subreddit.name}.json`;
-
-		const response = await fetch(gameUrl, {
-			method: 'GET',
-			headers: {
-				'Content-Type': 'application/json'
-			}
-		});
-
-		if (!response.ok) {
-			throw new Error(`Fetch game failed error: ${response.status}, ${response.statusText}`);
-		}
-		const gameData = await response.json();
 		if (!gameData || Object.keys(gameData).length <= 0 || gameData.currentDay == null) {
 			throw new Error(`Failed to load game data from response json`);
 		}
-		// Update the title to include the current day
+		// Increment the day for a new post
 		const currentDay = gameData.currentDay + 1;
 		if (!gameData.contentArray || !gameData.contentArray[currentDay]) {
 			throw new Error(`No next day for current day ${currentDay} and data ${gameData}`);
 		}
 
-		const title = `${subreddit.name} Plays DnD: Day ${currentDay}`;
+		const todaysGame = gameData.contentArray[currentDay];
+
+		const titlePrefix = gameData.titlePrefix ?? todaysGame.titlePrefix ?? `${subreddit.name} Dungeon:`;
+
+		const title = todaysGame.title ?? `${titlePrefix} Day ${currentDay + 1}`;
 
 		// Create the Reddit post with the updated title
 		const post = await context.reddit.submitPost({
@@ -93,7 +89,7 @@ export const createPost = async (context: Devvit.Context | JobContext, ui: UICli
 		};
 
 		// Step 5: Make a PATCH request to update the data
-		const patchResponse = await fetch(`${gameUrl}`, {
+		const patchResponse = await fetch(`${getGameURL(subreddit.name)}`, {
 			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
@@ -125,23 +121,7 @@ export const createPost = async (context: Devvit.Context | JobContext, ui: UICli
 	}
 }
 
-// Define interfaces for game data structures
-interface GameData {
-	ended?: boolean;
-	threadId?: string;
-	currentDay?: number;
-	latestPostID?: string;
-	contentArray?: ContentItem[];
-}
-
-interface ContentItem {
-	text?: string;
-	postID?: string;
-	postCreatedAt?: string;
-	refreshInterval?: number;
-}
-
-const getTopComment = async (context: Devvit.Context, postID: string) => {
+const getTopComment = async (context: Devvit.Context | JobContext, postID: string): Promise<Comment | null> => {
 	const comments = await context.reddit.getComments({
 		postId: postID,
 		limit: 1,
@@ -153,6 +133,7 @@ const getTopComment = async (context: Devvit.Context, postID: string) => {
 		console.log("No top comment loaded");
 		return null;
 	}
+	return topComment;
 }
 
 export const updateGame = async (
@@ -160,352 +141,78 @@ export const updateGame = async (
 	subredditName: string,
 	context: Devvit.Context | JobContext
 ): Promise<void> => {
-	// Firebase database URL
-	const gameUrl: string = `https://gwamps-quest-default-rtdb.firebaseio.com/RedditPlaysDnD/${subredditName}/games/${subredditName}.json`;
-	console.log("Fetching game data from ", gameUrl);
-	// Fetch the current game data from Firebase
-	let gameData: GameData;
 	try {
-		const response: Response = await fetch(gameUrl, {
-			method: 'GET',
+		// Firebase database URL
+		const gameUrl: string = getGameURL(subredditName);
+		console.log("Fetching game in updateGame from ", gameUrl);
+		// Fetch the current game data from Firebase
+		const gameData = await fetchGame(subredditName);
+
+		if (!gameData) {
+			console.error("Failed to fetch game data in update");
+			return;
+		}
+
+		// Set the Redis property 'game' to the game data
+		await redis.set('game', JSON.stringify(gameData));
+
+		// Check if the game has ended
+		if (gameData.ended ?? false) {
+			console.log('Game has ended');
+			return;
+		}
+
+		// Get the contentArray
+		const contentArray = gameData.contentArray || [];
+		if (contentArray.length === 0) {
+			console.log('Content array is empty');
+			return;
+		}
+
+		// Loop through the contentArray
+		for (let i = 0; i < contentArray.length; i++) {
+			const item = contentArray[i];
+
+			// Skip items that are already finished
+			if (item.finished || item.topCommentLocked) {
+				continue;
+			}
+
+			// Ensure the item has a postID
+			if (!item.postID) {
+				console.error(`No post ID for item at index ${i}`);
+				continue;
+			}
+
+			// Get the top comment for the current item
+			const postID: string = item.postID;
+			const topComment = await getTopComment(context, postID);
+
+			// Update the item with the top comment and mark it as finished
+			item.topComment = topComment;
+		}
+
+		// Prepare the updates object
+		const updates = {
+			contentArray: contentArray,
+		};
+
+		// Make a PATCH request to update the data
+		const patchResponse = await fetch(`${gameUrl}`, {
+			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
 			},
-		});
-		console.log("Got response: ", response);
-		if (response.ok) {
-			gameData = (await response.json()) as GameData;
-			if (!gameData) {
-				console.error("No game data found from ", (await response.json()));
-				return;
-			}
-		} else {
-			console.error(`Failed to fetch game data: ${response.status}`);
-			return;
-		}
-	} catch (error) {
-		console.error('Error fetching game data:', error);
-		return;
-	}
-
-	// Set the Redis property 'game' to the game data
-	await redis.set('game', JSON.stringify(gameData));
-
-	// Check if the game has ended
-	if (gameData.ended ?? false) {
-		console.log('Game has ended');
-		return;
-	}
-
-	// Get the last item in contentArray
-	const contentArray: ContentItem[] = gameData.contentArray || [];
-	if (contentArray.length === 0) {
-		console.log('Content array is empty');
-		return;
-	}
-
-	const lastItem: ContentItem = contentArray[contentArray.length - 1];
-	const postCreatedAt: Date = lastItem.postCreatedAt ? new Date(lastItem.postCreatedAt) : new Date();
-	const refreshInterval: number = lastItem.refreshInterval ?? DEFAULT_REFRESH_INTERVAL;
-
-	// Calculate the time when we should refresh
-	const nextRefreshTime: Date = new Date(postCreatedAt.getTime() + refreshInterval);
-	const now: Date = new Date();
-
-	// Check if it's time to update
-	if (nextRefreshTime <= now) {
-		// Assistant status management using Redis
-		const assistantStatus: string | null | undefined = await redis.get('assistant_status');
-
-		if (assistantStatus === 'busy') {
-			console.log('Assistant is currently running a job, waiting');
-			return;
-		}
-
-		// Check if there's an ongoing run
-		const storedRunId: string | null | undefined = await redis.get('assistant_runId');
-
-		if (storedRunId) {
-			// A run is in progress; check its status
-			const runStatus: string | null = await checkRunStatus(storedRunId, redis);
-			if (runStatus === 'succeeded') {
-				// Retrieve the assistant's response and proceed
-				const assistantResponse: string | null = await getAssistantResponse(gameData.threadId!, redis);
-				if (assistantResponse) {
-					await handleAssistantResponse(
-						assistantResponse,
-						gameData,
-						gameUrl,
-						subredditName,
-						context,
-						refreshInterval
-					);
-					// Clear the runId and reset assistant status
-					await redis.del('assistant_runId');
-					await redis.set('assistant_status', 'idle');
-				} else {
-					console.log('Assistant did not provide a response');
-					await redis.set('assistant_status', 'idle');
-				}
-			} else if (runStatus === 'failed' || runStatus === 'canceled') {
-				console.error(`Run ${storedRunId} has ${runStatus}`);
-				// Clear the runId and reset assistant status
-				await redis.del('assistant_runId');
-				await redis.set('assistant_status', 'idle');
-			} else {
-				console.log(`Run ${storedRunId} is still in progress`);
-				// Run is still in progress; exit the function
-				return;
-			}
-		} else {
-			// No run in progress; start a new run
-			await redis.set('assistant_status', 'busy');
-
-			// OpenAI Assistants API details
-			const assistantId: string = 'asst_PC60VAMDg1w5w2FL53Uv9lN5'; // Replace with your assistant ID
-			const apiKey: string = 'sk-svcacct-0HZuaxCRkaxXBepUCc0MuW4W0XPjtPRoTn9c_t42_3PrbClPtTn-v9gi8-erd-AHT3BlbkFJY153rxPpFsZBqpqxRLkJcWR8osQ-xsQ6ZiW45KqActod7E7fTAiB9UuvN9eFNUIA'; // Replace with your OpenAI API key
-			const apiHeaders: Record<string, string> = {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${apiKey}`,
-				'OpenAI-Beta': 'assistants=v2',
-			};
-
-			// Get the thread ID from game data or create a new thread
-			let threadId: string | undefined = gameData.threadId;
-			if (!threadId) {
-				// Create a new thread
-				try {
-					const threadResponse: Response = await fetch('https://api.openai.com/v1/threads', {
-						method: 'POST',
-						headers: apiHeaders,
-						body: JSON.stringify({}),
-					});
-
-					if (threadResponse.ok) {
-						const threadData = await threadResponse.json();
-						threadId = threadData.id;
-
-						// Save the thread ID to game data
-						gameData.threadId = threadId;
-
-						// Update game data in Firebase
-						await fetch(gameUrl, {
-							method: 'PUT',
-							headers: {
-								'Content-Type': 'application/json',
-							},
-							body: JSON.stringify(gameData),
-						});
-
-						console.log('Created new thread with ID:', threadId);
-					} else {
-						console.error(`Failed to create thread: ${threadResponse.status} ${threadResponse.statusText}`);
-						await redis.set('assistant_status', 'idle');
-						return;
-					}
-				} catch (error) {
-					console.error('Error creating thread:', error);
-					await redis.set('assistant_status', 'idle');
-					return;
-				}
-			}
-
-			// Get the top comment from the last Reddit post
-			if (!lastItem.postID) {
-				console.error("No post id for last item");
-				return;
-			}
-			const postID: string = lastItem.postID;
-			try {
-				// Fetch the comments
-				const comments = await context.reddit.getComments({ postId: postID, limit: 1, sort: 'top' });
-				console.log("Fetched comments: ", comments);
-				const allComments = await comments.all();
-				console.log("All comments: ", allComments);
-
-				if (allComments.length <= 0) {
-					console.log('No comments for post id ', postID);
-					await redis.set('assistant_status', 'idle');
-					return;
-				}
-
-				const topComment = allComments[0];
-				if (!topComment) {
-					console.log('No comments on the post');
-					await redis.set('assistant_status', 'idle');
-					return;
-				}
-
-				const userInput: string = topComment.body;
-
-				// Create a new message in the thread with the top comment
-				const messageUrl: string = `https://api.openai.com/v1/threads/${threadId}/messages`;
-				const messageBody = {
-					role: 'user',
-					content: userInput,
-				};
-
-				const messageResponse: Response = await fetch(messageUrl, {
-					method: 'POST',
-					headers: apiHeaders,
-					body: JSON.stringify(messageBody),
-				});
-
-				if (!messageResponse.ok) {
-					console.error(`Failed to create message: ${messageResponse.status} ${messageResponse.statusText}`);
-					await redis.set('assistant_status', 'idle');
-					return;
-				}
-
-				// Create a run to get the assistant's response
-				const runUrl: string = `https://api.openai.com/v1/threads/${threadId}/runs`;
-				const runBody = {
-					assistant_id: assistantId,
-				};
-
-				const runResponse: Response = await fetch(runUrl, {
-					method: 'POST',
-					headers: apiHeaders,
-					body: JSON.stringify(runBody),
-				});
-
-				if (!runResponse.ok) {
-					console.error(`Failed to create run: ${runResponse.status} ${runResponse.statusText}`);
-					await redis.set('assistant_status', 'idle');
-					return;
-				}
-
-				const runData = await runResponse.json();
-				const runId: string = runData.id;
-
-				// Store the runId in Redis
-				await redis.set('assistant_runId', runId);
-
-				console.log(`Started run with ID: ${runId}`);
-
-				// Exit the function; the next call will check the run status
-				return;
-			} catch (error) {
-				console.error('Error during assistant interaction:', error);
-				await redis.set('assistant_status', 'idle');
-				return;
-			}
-		}
-	} else {
-		console.log('Not time to refresh yet');
-	}
-};
-
-// Helper function to check the status of a run
-const checkRunStatus = async (runId: string, redis: RedisClient): Promise<string | null> => {
-	const apiKey: string = 'YOUR_OPENAI_API_KEY'; // Replace with your OpenAI API key
-	const apiHeaders: Record<string, string> = {
-		'Content-Type': 'application/json',
-		Authorization: `Bearer ${apiKey}`,
-		'OpenAI-Beta': 'assistants=v2',
-	};
-
-	try {
-		// Get the run status
-		const runStatusResponse: Response = await fetch(`https://api.openai.com/v1/runs/${runId}`, {
-			method: 'GET',
-			headers: apiHeaders,
+			body: JSON.stringify(updates),
 		});
 
-		if (!runStatusResponse.ok) {
-			console.error(`Failed to get run status: ${runStatusResponse.status} ${runStatusResponse.statusText}`);
-			await redis.set('assistant_status', 'idle');
-			return null;
-		}
-
-		const runStatusData = await runStatusResponse.json();
-		return runStatusData.status as string;
-	} catch (error) {
-		console.error('Error checking run status:', error);
-		await redis.set('assistant_status', 'idle');
-		return null;
-	}
-};
-
-// Helper function to retrieve the assistant's response
-const getAssistantResponse = async (threadId: string, redis: RedisClient): Promise<string | null> => {
-	const apiKey: string = 'YOUR_OPENAI_API_KEY'; // Replace with your OpenAI API key
-	const apiHeaders: Record<string, string> = {
-		'Content-Type': 'application/json',
-		Authorization: `Bearer ${apiKey}`,
-		'OpenAI-Beta': 'assistants=v2',
-	};
-
-	try {
-		// Get the messages in the thread
-		const messagesResponse: Response = await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
-			method: 'GET',
-			headers: apiHeaders,
-		});
-
-		if (!messagesResponse.ok) {
-			console.error(`Failed to list messages: ${messagesResponse.status} ${messagesResponse.statusText}`);
-			return null;
-		}
-
-		const messagesData = await messagesResponse.json();
-		const messages = messagesData.data;
-
-		// Find the last assistant message
-		const assistantMessages = messages.filter((msg: any) => msg.role === 'assistant');
-		if (assistantMessages.length > 0) {
-			const lastAssistantMessage = assistantMessages[assistantMessages.length - 1];
-			return lastAssistantMessage.content as string;
+		if (!patchResponse.ok) {
+			console.error(`Failed to update game data: ${patchResponse.statusText}`);
 		} else {
-			console.log('No assistant messages found');
-			return null;
+			console.log('Game data updated successfully');
 		}
-	} catch (error) {
-		console.error('Error retrieving assistant response:', error);
-		return null;
+
+	} catch (e) {
+		console.error(`Error in updateGame: ${e}`);
 	}
 };
-
-// Helper function to handle the assistant's response
-const handleAssistantResponse = async (
-	assistantResponse: string,
-	gameData: GameData,
-	gameUrl: string,
-	subredditName: string,
-	context: Devvit.Context | JobContext,
-	refreshInterval: number
-): Promise<void> => {
-	// Create a new Reddit post with the assistant's response
-	const newPostTitle: string = `${subredditName} Plays DnD: Day ${gameData.currentDay ?? 0 + 1}`;
-	const newPost = await context.reddit.submitPost({
-		title: newPostTitle,
-		preview: CreatePreview(),
-		subredditName: subredditName,
-	});
-
-	// Prepare the new content item
-	const newContentItem: ContentItem = {
-		text: assistantResponse,
-		postID: newPost.id,
-		postCreatedAt: new Date().toISOString(),
-		refreshInterval: refreshInterval,
-	};
-
-	// Update the game data
-	gameData.currentDay = (gameData.currentDay ?? 0) + 1;
-	gameData.latestPostID = newPost.id;
-	gameData.contentArray = gameData.contentArray ?? [];
-	gameData.contentArray.push(newContentItem);
-
-	// Update the game data in Firebase
-	await fetch(gameUrl, {
-		method: 'PUT',
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify(gameData),
-	});
-
-	console.log('Created new post and updated game data in Firebase');
-};
-
