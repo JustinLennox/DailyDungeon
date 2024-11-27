@@ -9,7 +9,7 @@ Devvit.addMenuItem({
   label: 'New Reddit Plays DnD post',
   location: 'subreddit',
   onPress: async (_event, context) => {
-    createPost(context, context.ui);
+    await createPost(context, context.ui);
   }
 });
 

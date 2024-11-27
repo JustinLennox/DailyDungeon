@@ -110,7 +110,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
           </vstack>
         )}
 
-        {gameData && gameData.topComment && CommentView(context, JSON.parse(gameData.topComment))}
+        {gameData && gameData.topComment && CommentView(context, gameData.topComment)}
 
         <spacer grow />
 

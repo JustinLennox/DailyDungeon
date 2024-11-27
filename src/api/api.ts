@@ -8,10 +8,15 @@ const DEFAULT_REFRESH_INTERVAL = 60000;
 const baseURL = "https://gwamps-quest-default-rtdb.firebaseio.com/RedditPlaysDnD"
 
 const getGameURL = (subredditName: string): string => {
-	return `${baseURL}/${subredditName}/games/${subredditName}.json`;
+	return `${baseURL}/Subreddits/${subredditName}/games/${subredditName}.json`;
 }
 
-export const fetchGame = async (subredditName: string): Promise<any | null> => {
+interface GameResponse {
+	gameData: any | null;
+	error: string | null;
+}
+
+export const fetchGame = async (subredditName: string): Promise<GameResponse> => {
 	console.log("Fetching game for ", subredditName);
 	try {
 		// Construct the full URL with all query parameters
@@ -25,36 +30,43 @@ export const fetchGame = async (subredditName: string): Promise<any | null> => {
 		});
 		if (!response.ok) {
 			// Handle non-200 responses
-			console.log("Fetch game info failed: ", response);
-			return null;
+			return { gameData: null, error: `Fetch game failed ${response.status} ${response.statusText}`};
 		}
 		const responseJSON = await response.json();
 		console.log("Fetch info succeeded: ", responseJSON);
+		return { gameData: responseJSON, error: null};
 	} catch (e) {
-		console.error("Failed to fetch game info: ", e);
+		return { gameData: null, error: `Fetch game failed ${e}`};
 	}
 }
 
-export const createPost = async (context: Devvit.Context | JobContext, ui: UIClient | undefined) => {
+export const createPost = async (context: Devvit.Context | JobContext, ui: UIClient | null = null) => {
 	try {
 		ui?.showToast("Creating post, hang tight...");
 		const subreddit = await context.reddit.getCurrentSubreddit();
-		const gameData = await fetchGame(subreddit.name);
+		const { gameData, error } = await fetchGame(subreddit.name);
+
+		if (error) {
+			throw new Error(`Fetch game error occurred`);
+		}
 
 		if (!gameData || Object.keys(gameData).length <= 0 || gameData.currentDay == null) {
-			throw new Error(`Failed to load game data from response json`);
+			console.log(`No existing game data`);
 		}
+
 		// Increment the day for a new post
-		const currentDay = gameData.currentDay + 1;
-		if (!gameData.contentArray || !gameData.contentArray[currentDay]) {
-			throw new Error(`No next day for current day ${currentDay} and data ${gameData}`);
+		console.log("Incrementing current day");
+		const currentDay = (gameData?.currentDay ?? -1) + 1;
+		let title = ""
+		if (gameData && gameData.contentArray && gameData.contentArray[currentDay]) {
+
+			console.log(`No content array for game data`);
+			const todaysGame = gameData.contentArray[currentDay];
+			const titlePrefix = gameData.titlePrefix ?? todaysGame.titlePrefix ?? `${subreddit.name} Dungeon:`;
+			title = todaysGame.title ?? `${titlePrefix} Day ${currentDay + 1}`;
+		} else {
+			title = `r/${subreddit.name} Dungeon`;
 		}
-
-		const todaysGame = gameData.contentArray[currentDay];
-
-		const titlePrefix = gameData.titlePrefix ?? todaysGame.titlePrefix ?? `${subreddit.name} Dungeon:`;
-
-		const title = todaysGame.title ?? `${titlePrefix} Day ${currentDay + 1}`;
 
 		// Create the Reddit post with the updated title
 		const post = await context.reddit.submitPost({
@@ -68,33 +80,22 @@ export const createPost = async (context: Devvit.Context | JobContext, ui: UICli
 		const postCreatedAt = new Date().toISOString();
 
 		// Prepare the content array item
-		const contentUpdate = {
+		const postUpdate = {
 			postID: postID,
 			postCreatedAt: postCreatedAt,
-		};
-
-		// Step 2: Update the contentArray
-		let contentArray = gameData.contentArray || [];
-		contentArray.push(contentUpdate);
-
-		// Step 3: Update the posts object
-		let posts = gameData.posts || {};
-		posts[postID] = currentDay;
-
-		// Step 4: Prepare the updates object
-		const updates = {
-			contentArray: contentArray,
-			latestPostID: postID,
-			posts: posts,
+			subredditName: subreddit.name,
+			subredditID: subreddit.id,
+			creatingUserID: context.userId,
+			day: currentDay
 		};
 
 		// Step 5: Make a PATCH request to update the data
-		const patchResponse = await fetch(`${getGameURL(subreddit.name)}`, {
-			method: 'PATCH',
+		const patchResponse = await fetch(`${baseURL}/Subreddits/${subreddit.name}/Posts/${postID}.json`, {
+			method: 'PUT',
 			headers: {
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify(updates),
+			body: JSON.stringify(postUpdate),
 		});
 
 		if (!patchResponse.ok) {
@@ -109,7 +110,10 @@ export const createPost = async (context: Devvit.Context | JobContext, ui: UICli
 			});
 
 			ui.navigateTo(post);
+		} else {
+			console.log("No ui for navigation");
 		}
+		await updateGame(context.redis, subreddit.name, context);
 	} catch (e) {
 		console.error("Error creating post: ", e);
 		if (ui) {
@@ -142,11 +146,13 @@ export const updateGame = async (
 	context: Devvit.Context | JobContext
 ): Promise<void> => {
 	try {
-		// Firebase database URL
-		const gameUrl: string = getGameURL(subredditName);
-		console.log("Fetching game in updateGame from ", gameUrl);
+		console.log("Fetching game in updateGame");
 		// Fetch the current game data from Firebase
-		const gameData = await fetchGame(subredditName);
+		const { gameData, error } = await fetchGame(subredditName);
+
+		if (error) {
+			throw new Error(`Fetch game error occurred`);
+		}
 
 		if (!gameData) {
 			console.error("Failed to fetch game data in update");
@@ -175,43 +181,52 @@ export const updateGame = async (
 
 			// Skip items that are already finished
 			if (item.finished || item.topCommentLocked) {
+				console.log(`${item.postID} is finished or locked, skipping`);
 				continue;
 			}
 
 			// Ensure the item has a postID
 			if (!item.postID) {
-				console.error(`No post ID for item at index ${i}`);
+				console.log(`No post ID for item at index ${i}, skipping`);
 				continue;
 			}
 
 			// Get the top comment for the current item
 			const postID: string = item.postID;
+			console.log(`Getting top comment for ${item.postID}`);
 			const topComment = await getTopComment(context, postID);
+			if (!topComment) {
+				console.log("Couldn't get top comment for post ", postID);
+				continue;
+			}
 
-			// Update the item with the top comment and mark it as finished
-			item.topComment = topComment;
+			if (topComment.id === item.topComment?.id) {
+				console.log(`Top comment is already top comment with id ${topComment.id}, skipping`);
+				continue;
+			}
+
+			const updates = {
+				comment: topComment,
+				postID: postID,
+				subredditName: subredditName,
+			}
+
+			console.log("Posting top comment: ", updates);
+
+			const patchResponse = await fetch(`${baseURL}/Subreddits/${subredditName}/TopComments/${postID}.json`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(updates),
+			});
+	
+			if (!patchResponse.ok) {
+				console.error(`Failed to update game data: ${patchResponse.statusText}`);
+			} else {
+				console.log('Game data updated successfully');
+			}
 		}
-
-		// Prepare the updates object
-		const updates = {
-			contentArray: contentArray,
-		};
-
-		// Make a PATCH request to update the data
-		const patchResponse = await fetch(`${gameUrl}`, {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify(updates),
-		});
-
-		if (!patchResponse.ok) {
-			console.error(`Failed to update game data: ${patchResponse.statusText}`);
-		} else {
-			console.log('Game data updated successfully');
-		}
-
 	} catch (e) {
 		console.error(`Error in updateGame: ${e}`);
 	}

@@ -3,7 +3,7 @@ import './capabilities/actions/index.js';
 import { App } from './components/App.js';
 import { Devvit, JobContext, MediaPlugin, RedditAPIClient, RedisClient, ScheduledCronJob, ScheduledJob, Scheduler, UIClient } from '@devvit/public-api';
 import { CreatePreview } from './components/Preview.js';
-import { fetchGame, updateGame } from './api/api.js';
+import { createPost, fetchGame, updateGame } from './api/api.js';
 
 // Define what packages you want to use
 Devvit.configure({
@@ -41,12 +41,7 @@ Devvit.addSchedulerJob({
   name: 'daily_post',
   onRun: async (_, context) => {
     console.log('daily_thread handler called');
-    const subreddit = await context.reddit.getCurrentSubreddit();
-    const resp = await context.reddit.submitPost({
-      subredditName: subreddit.name,
-      title: 'Reddit Plays DnD',
-      preview: CreatePreview()
-    });
+    const resp = await createPost(context);
     console.log('posted resp', JSON.stringify(resp));
   },
 });

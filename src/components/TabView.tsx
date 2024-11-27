@@ -6,7 +6,7 @@ export const TabsView = (context: Devvit.Context, game: any, selectedTab: TabTyp
 	const getTabTitle = (game: any, tab: TabType): string => {
 		switch (tab) {
 			case TabType.main:
-				return game && game.day ? `Day ${game.day}` : "Today";
+				return game && game.day ? `Day ${game.day + 1}` : "Today";
 			case TabType.past:
 				return "Past Days";
 		}
