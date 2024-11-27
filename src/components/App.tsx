@@ -12,60 +12,56 @@ export const App = (context: Devvit.Context): JSX.Element => {
 
   // Fetch game data from Redis
   const {
-    data: allGamesDataString,
+    data: allGamesData,
     loading: loadingAllGamesData,
     error: allGamesDataError,
   } = useAsync(async () => {
-    const data = await context.redis.get('game');
-    return data ?? null;
+    try {
+      const allGamesDataString = await context.redis.get('game');
+      console.log("String: ", allGamesDataString);
+      return allGamesDataString ? JSON.parse(allGamesDataString) : null;
+    } catch (e) {
+      console.error("Failed to load game data");
+      throw e;
+    }
   });
 
   // Parse game data and get the latest message
-  const allGamesData = allGamesDataString ? JSON.parse(allGamesDataString) : null;
-  const gameData = allGamesData?.contentArray
-    ? allGamesData.contentArray[allGamesData.contentArray.length - 1]
+  const postNumber = (allGamesData && allGamesData.posts && context.postId) ? allGamesData.posts[context.postId] : null;
+  const gameData = (postNumber != null && allGamesData && allGamesData.contentArray)
+    ? allGamesData.contentArray[postNumber]
     : null;
+  console.log("Client reloaded with id, post number, gameData text: ", context.postId, postNumber, gameData);
 
-  // Fetch top Reddit comment
-  const {
-    data: topCommentJSON,
-    loading: loadingTopComment,
-    error: topCommentError,
-  } = useAsync(
-    async () => {
-      console.log("Fetching top comment");
-      // console.log("fetching top comment for ", context.postId);
-      if (!context.postId) { return null };
-      const postID = context.postId;
 
-      // if (!latestMessage || !latestMessage.postID) return null;
-      // const postID = latestMessage.postID;
+  // // Fetch top Reddit comment
+  // const {
+  //   data: topCommentJSON,
+  //   loading: loadingTopComment,
+  //   error: topCommentError,
+  // } = useAsync(
+  //   async () => {
+  //     console.log("Fetching top comment");
+  //     return null;
+  //     // console.log("fetching top comment for ", context.postId);
+  //     // if (!context.postId && !gameData.topComment) { return null };
+  //     // const postID = context.postId;
 
-      const comments = await context.reddit.getComments({
-        postId: postID,
-        limit: 1,
-        sort: 'top',
-      });
-      const allComments = await comments.all();
-      const topComment = allComments[0];
-      if (!topComment) {
-        console.log("No top comment loaded");
-        return null;
-      }
-      console.log("loaded top comment: ", topComment.body);
-      const editedComment = { ...topComment, dateString: getRelativeTime(topComment.createdAt) };
-      return JSON.stringify(editedComment);
-    },
-    { depends: [gameData?.postID] }
-  );
+  //     // // if (!latestMessage || !latestMessage.postID) return null;
+  //     // // const postID = latestMessage.postID;
+
+  //     // console.log("loaded top comment: ", topComment.body);
+  //     // const editedComment = { ...topComment, dateString: getRelativeTime(topComment.createdAt) };
+  //     // return JSON.stringify(editedComment);
+  //   },
+  //   { depends: [gameData?.postID] }
+  // );
 
   const castVoteButtonPressed = async () => {
     try {
-      context.ui.showToast(`WHYYY... is there a context??: ${context}`);
       const redditPostID = context.postId;
       if (redditPostID) {
         const post = await context.reddit.getPostById(redditPostID);
-        context.ui.showToast(`Navigating to post: ${redditPostID}`);
         context.ui.navigateTo(post);
       } else {
         context.ui.showToast(`No reddit post ID`);
@@ -79,6 +75,18 @@ export const App = (context: Devvit.Context): JSX.Element => {
   // Render the component
   return (
     <zstack width={100} height={100} padding='none' gap='none' alignment='center middle'>
+      {allGamesData && allGamesData.showBackground &&
+        <vstack width={100} height={100}>
+          <image
+            url="BackgroundLoop.gif"
+            width={100}
+            height={100}
+            imageWidth={640}
+            imageHeight={640}
+            resizeMode='cover'
+          />
+        </vstack>
+      }
       <vstack padding="small" cornerRadius="medium" gap="small" alignment="center" width={100} height={100}>
         {TabsView(context, gameData, selectedTab, setSelectedTab)}
         {/* Loading and error states for game data */}
@@ -89,7 +97,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
 
         {/* Game View */}
         {gameData && (
-          <vstack padding="medium" cornerRadius="medium" gap="small" minWidth={50} backgroundColor='black'>
+          <vstack padding="medium" cornerRadius="medium" gap="small" minWidth={50} backgroundColor='rgba(0,0,0,0.8)'>
             {/* {((context.dimensions?.width ?? 0) > 500) && (<hstack>
               <text wrap weight='bold' size='small' color='gray'>
                 From the dungeon…
@@ -102,7 +110,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
           </vstack>
         )}
 
-        {!loadingTopComment && topCommentJSON && CommentView(context, JSON.parse(topCommentJSON))}
+        {gameData && gameData.topComment && CommentView(context, JSON.parse(gameData.topComment))}
 
         <spacer grow />
 

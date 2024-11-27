@@ -15,7 +15,7 @@ export const TabsView = (context: Devvit.Context, game: any, selectedTab: TabTyp
 	const TabView = (tabType: TabType): JSX.Element => {
 		return (
 			<vstack>
-				<button appearance="plain" onPress={() => setSelectedTab(tabType)}>
+				<button appearance="plain" size="small" onPress={() => setSelectedTab(tabType)}>
 					{getTabTitle(game, tabType)}
 				</button>
 				<hstack height='1.5px' width='100%' backgroundColor={selectedTab == tabType ? 'red' : 'transparent'}></hstack>

@@ -59,22 +59,22 @@ Devvit.addMenuItem({
   },
 });
 
-Devvit.addMenuItem({
-  location: 'post',
-  label: 'Reply with Dice Roll',
-  onPress: async (event, context) => {
-    console.log(`Invoked action on comment ${event.targetId}`);
-    try {
-      console.log(event, context);
-      await context.reddit.submitComment({
-        id: event.targetId, // where context menu action was invoked
-        text: 'Hello World with Media',
-      });
-    } catch (err) {
-      throw new Error(`Error uploading media: ${err}`);
-    }
-  },
-});
+// Devvit.addMenuItem({
+//   location: 'post',
+//   label: 'Reply with Dice Roll',
+//   onPress: async (event, context) => {
+//     console.log(`Invoked action on comment ${event.targetId}`);
+//     try {
+//       console.log(event, context);
+//       await context.reddit.submitComment({
+//         id: event.targetId, // where context menu action was invoked
+//         text: 'Hello World with Media',
+//       });
+//     } catch (err) {
+//       throw new Error(`Error uploading media: ${err}`);
+//     }
+//   },
+// });
 
 // Devvit.addMenuItem({
 //   location: 'comment',

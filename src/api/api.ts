@@ -171,6 +171,20 @@ interface ContentItem {
 	refreshInterval?: number;
 }
 
+const getTopComment = async (context: Devvit.Context, postID: string) => {
+	const comments = await context.reddit.getComments({
+		postId: postID,
+		limit: 1,
+		sort: 'top',
+	});
+	const allComments = await comments.all();
+	const topComment = allComments[0];
+	if (!topComment) {
+		console.log("No top comment loaded");
+		return null;
+	}
+}
+
 export const updateGame = async (
 	redis: RedisClient,
 	subredditName: string,
