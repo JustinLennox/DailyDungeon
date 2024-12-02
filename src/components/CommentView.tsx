@@ -37,7 +37,7 @@ export const CommentView = (context: Devvit.Context, comment: any): JSX.Element 
 	}
 
 	return (
-		<vstack padding="medium" cornerRadius="medium" gap="small" backgroundColor='secondary-background'>
+		<vstack padding="medium" cornerRadius="medium" gap="small" backgroundColor='secondary-background' minWidth={50}>
 			<hstack gap='small'>
 				<hstack width='20px' height='20px' cornerRadius='full'>
 					<image
@@ -58,16 +58,17 @@ export const CommentView = (context: Devvit.Context, comment: any): JSX.Element 
 					<spacer grow />
 				</hstack>
 			</hstack>
-			<hstack padding='small' alignment='center middle' maxWidth={100}>
+			{/* <hstack padding='small' alignment='center middle'> */}
 				<text wrap color='neutral-content-strong'
 					weight='bold'
 					size={'medium'}
 					alignment='center middle'
 					overflow='ellipsis'
+					width={100}
 				>
 					{comment.body}
 				</text>
-			</hstack>
+			{/* </hstack> */}
 			<hstack gap='small' alignment='start middle'>
 				<icon name="upvote-fill" color="upvote-plain" size='small'/>
 				<text size='small'>{comment.score}</text>

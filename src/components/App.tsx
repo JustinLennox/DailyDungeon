@@ -104,18 +104,18 @@ export const App = (context: Devvit.Context): JSX.Element => {
               </text>
               <spacer grow />
             </hstack>)} */}
-            <vstack alignment='center middle' padding='small'>
-              <text wrap style='heading' alignment='center middle' color='white' width={100}>{gameData.text}</text>
-            </vstack>
+            {/* <vstack alignment='center middle' padding='small'> */}
+              <text wrap size='medium' weight='bold' alignment='center middle' color='white' width={100}>{gameData.text}</text>
+            {/* </vstack> */}
           </vstack>
         )}
 
-        {gameData && gameData.topComment && CommentView(context, gameData.topComment)}
+        {gameData && gameData.topComment && (CommentView(context, gameData.topComment))}
 
         <spacer grow />
 
         {/* HStack with button and dice icon */}
-        <hstack gap="small" alignment="center" width={100} grow>
+        <hstack gap="small" alignment="center bottom" width={100}>
           <button
             appearance="primary"
             grow

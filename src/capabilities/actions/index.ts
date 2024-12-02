@@ -5,13 +5,13 @@ import { CreatePreview } from '../../components/Preview.js';
 /*
 Menu action to create an experience post.
  */
-Devvit.addMenuItem({
-  label: 'New Reddit Plays DnD post',
-  location: 'subreddit',
-  onPress: async (_event, context) => {
-    await createPost(context, context.ui);
-  }
-});
+// Devvit.addMenuItem({
+//   label: 'New Reddit Plays DnD post',
+//   location: 'subreddit',
+//   onPress: async (_event, context) => {
+//     await createPost(context, context.ui);
+//   }
+// });
 
 const form = Devvit.createForm(
   {
