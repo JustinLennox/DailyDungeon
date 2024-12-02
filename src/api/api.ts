@@ -33,7 +33,7 @@ export const fetchGame = async (subredditName: string): Promise<GameResponse> =>
 			return { gameData: null, error: `Fetch game failed ${response.status} ${response.statusText}`};
 		}
 		const responseJSON = await response.json();
-		console.log("Fetch info succeeded: ", responseJSON);
+		console.log("Fetch game succeeded");
 		return { gameData: responseJSON, error: null};
 	} catch (e) {
 		return { gameData: null, error: `Fetch game failed ${e}`};

@@ -25,7 +25,19 @@ export const App = (context: Devvit.Context): JSX.Element => {
     try {
       const allGamesDataString = await context.redis.get("game");
       console.log("String: ", allGamesDataString);
-      return allGamesDataString ? JSON.parse(allGamesDataString) : null;
+      const allGamesData = allGamesDataString ? JSON.parse(allGamesDataString) : null;
+      if (allGamesData && currentDay === null) {
+        const postDay =
+          allGamesData.posts && context.postId
+            ? allGamesData.posts[context.postId]
+            : null;
+        if (postDay !== null && postDay !== undefined) {
+          setCurrentDay(postDay);
+        } else {
+          setCurrentDay(maxDay);
+        }
+      }
+      return allGamesData;
     } catch (e) {
       console.error("Failed to load game data");
       throw e;
@@ -38,35 +50,25 @@ export const App = (context: Devvit.Context): JSX.Element => {
       ? allGamesData.currentDay
       : 0;
 
-  // Set initial currentDay based on context.postId and allGamesData
-  if (allGamesData && currentDay === null) {
-    const postDay =
-      allGamesData.posts && context.postId
-        ? allGamesData.posts[context.postId]
-        : null;
-    if (postDay !== null && postDay !== undefined) {
-      setCurrentDay(postDay);
-    } else {
-      setCurrentDay(maxDay);
-    }
-  }
+  const postNumber = (allGamesData && allGamesData.posts && context.postId) ? allGamesData.posts[context.postId] : 0;
 
   // Get the postID for the current day
   const currentPostID =
     allGamesData &&
     allGamesData.contentArray &&
-    allGamesData.contentArray[currentDay ?? 0]?.postID;
+    allGamesData.contentArray[currentDay ?? postNumber]?.postID;
 
   const gameData =
     allGamesData &&
       allGamesData.contentArray &&
-      allGamesData.contentArray[currentDay ?? 0]
-      ? allGamesData.contentArray[currentDay ?? 0]
+      allGamesData.contentArray[currentDay ?? postNumber]
+      ? allGamesData.contentArray[currentDay ?? postNumber]
       : null;
 
   console.log(
-    "Client reloaded with currentDay, postID, gameData text: ",
+    "Client reloaded with currentDay, postNumber, postID, gameData text: ",
     currentDay,
+    postNumber,
     currentPostID,
     gameData?.text
   );
@@ -121,7 +123,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
             game={gameData}
             selectedTab={selectedTab}
             setSelectedTab={setSelectedTab}
-            currentDay={currentDay ?? 0}
+            currentDay={currentDay ?? postNumber}
             setCurrentDay={setCurrentDay}
             maxDay={maxDay}
           />
