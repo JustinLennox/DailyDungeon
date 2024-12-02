@@ -20,14 +20,14 @@ Devvit.addCustomPostType({
   render: App,
 });
 
-Devvit.addMenuItem({
-  label: "Update Reddit Plays DnD",
-  location: 'subreddit',
-  onPress: async (_event, context) => {
-    await AddScheduledPostJob(context.scheduler, context.redis, context.ui);
-    await AddUpdatePostJob(context.scheduler, context.redis, context.ui);
-  },
-});
+// Devvit.addMenuItem({
+//   label: "Update Reddit Plays DnD",
+//   location: 'subreddit',
+//   onPress: async (_event, context) => {
+//     await AddScheduledPostJob(context.scheduler, context.redis, context.ui);
+//     await AddUpdatePostJob(context.scheduler, context.redis, context.ui);
+//   },
+// });
 
 Devvit.addTrigger({
   event: 'AppInstall',

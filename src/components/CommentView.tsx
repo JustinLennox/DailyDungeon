@@ -38,7 +38,7 @@ export const CommentView = (context: Devvit.Context, comment: any): JSX.Element 
 
 	return (
 		<vstack padding="medium" cornerRadius="medium" gap="small" backgroundColor='secondary-background' minWidth={50}>
-			<hstack gap='small'>
+			<hstack gap='small' width={100}>
 				<hstack width='20px' height='20px' cornerRadius='full'>
 					<image
 						url={"avatar_default.png"}
@@ -57,20 +57,35 @@ export const CommentView = (context: Devvit.Context, comment: any): JSX.Element 
 					)}
 					<spacer grow />
 				</hstack>
+				<spacer grow />
+				{comment.diceRoll && (
+					<zstack width='20px' height='20px' alignment='center middle'>
+						<image
+							url={"D20Icon.png"}
+							imageHeight={20}
+							imageWidth={20}
+							resizeMode='cover'
+						/>
+						<text size='small' weight='bold' color={comment.diceRoll === 20 ? "yellow" : comment.diceRoll === 1 ? "red" : "white"}>
+							{comment.diceRoll}
+						</text>
+					</zstack>
+				)
+				}
 			</hstack>
 			{/* <hstack padding='small' alignment='center middle'> */}
-				<text wrap color='neutral-content-strong'
-					weight='bold'
-					size={'medium'}
-					alignment='center middle'
-					overflow='ellipsis'
-					width={100}
-				>
-					{comment.body}
-				</text>
+			<text wrap color='neutral-content-strong'
+				weight='bold'
+				size={'medium'}
+				alignment='center middle'
+				overflow='ellipsis'
+				width={100}
+			>
+				{comment.body}
+			</text>
 			{/* </hstack> */}
 			<hstack gap='small' alignment='start middle'>
-				<icon name="upvote-fill" color="upvote-plain" size='small'/>
+				<icon name="upvote-fill" color="upvote-plain" size='small' />
 				<text size='small'>{comment.score}</text>
 				<spacer grow />
 				<hstack

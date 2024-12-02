@@ -2,7 +2,7 @@ import { Devvit, useAsync, useState, Comment } from '@devvit/public-api';
 import { ExpireTime, StringDictionary } from '../utils/utils.js';
 
 export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDiceView: any): JSX.Element => {
-	const totalKey = `rollTotals:${gameData.postID}`;
+	const totalKey = `rollTotals:${gameData?.postID ?? "default"}`;
 
 	const {
 		data: userRoll,

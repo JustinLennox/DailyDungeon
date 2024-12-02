@@ -1,6 +1,6 @@
 import { Comment, Devvit, JobContext, MediaPlugin, RedditAPIClient, RedisClient, ScheduledCronJob, ScheduledJob, Scheduler, UIClient, useForm } from '@devvit/public-api';
 import { CreatePreview } from '../components/Preview.js';
-import { StringDictionary } from '../utils/utils.js';
+import { getRelativeTime, StringDictionary } from '../utils/utils.js';
 
 // const DEFAULT_REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 const DEFAULT_REFRESH_INTERVAL = 60000;
@@ -30,13 +30,13 @@ export const fetchGame = async (subredditName: string): Promise<GameResponse> =>
 		});
 		if (!response.ok) {
 			// Handle non-200 responses
-			return { gameData: null, error: `Fetch game failed ${response.status} ${response.statusText}`};
+			return { gameData: null, error: `Fetch game failed ${response.status} ${response.statusText}` };
 		}
 		const responseJSON = await response.json();
 		console.log("Fetch game succeeded");
-		return { gameData: responseJSON, error: null};
+		return { gameData: responseJSON, error: null };
 	} catch (e) {
-		return { gameData: null, error: `Fetch game failed ${e}`};
+		return { gameData: null, error: `Fetch game failed ${e}` };
 	}
 }
 
@@ -140,6 +140,27 @@ const getTopComment = async (context: Devvit.Context | JobContext, postID: strin
 	return topComment;
 }
 
+const getUserDiceRoll = async (context: Devvit.Context | JobContext, userID: string | null | undefined, postID: string | null): Promise<number | null> => {
+	if (!userID) {
+		console.log("Can't get dice roll for no user ID");
+		return null;
+	}
+	if (!postID) {
+		console.log("Can't get dice roll for no post ID");
+		return null;
+	}
+	const postUserRollsKey = `userRolls:${postID}`;
+	const userRollString = await context.redis.hGet(postUserRollsKey, userID);
+	console.log("Got user roll string: ", userRollString);
+	const roll = userRollString ? parseInt(userRollString) : NaN;
+	if (roll && !Number.isNaN(roll)) {
+		console.log("Returning user roll: ", roll);
+		// context.ui.showToast(`You have already rolled ${roll} for this post.`);
+		return roll;
+	}
+	return null;
+}
+
 export const updateGame = async (
 	redis: RedisClient,
 	subredditName: string,
@@ -200,13 +221,17 @@ export const updateGame = async (
 				continue;
 			}
 
-			if (topComment.id === item.topComment?.id) {
-				console.log(`Top comment is already top comment with id ${topComment.id}, skipping`);
+			const commentUpdate: any = { ...topComment };
+			commentUpdate.dateString = getRelativeTime(topComment.createdAt);
+			commentUpdate.diceRoll = await getUserDiceRoll(context, topComment.authorId, topComment.postId);
+
+			if (topComment.id === item.topComment?.id && commentUpdate.diceRoll === item.topComment?.diceRoll) {
+				console.log(`Top comment is already top comment with id ${topComment.id} and dice roll ${commentUpdate.diceRoll}, skipping`);
 				continue;
 			}
 
 			const updates = {
-				comment: topComment,
+				comment: commentUpdate,
 				postID: postID,
 				subredditName: subredditName,
 			}
@@ -220,7 +245,7 @@ export const updateGame = async (
 				},
 				body: JSON.stringify(updates),
 			});
-	
+
 			if (!patchResponse.ok) {
 				console.error(`Failed to update game data: ${patchResponse.statusText}`);
 			} else {

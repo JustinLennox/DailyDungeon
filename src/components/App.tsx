@@ -24,7 +24,6 @@ export const App = (context: Devvit.Context): JSX.Element => {
   } = useAsync(async () => {
     try {
       const allGamesDataString = await context.redis.get("game");
-      console.log("String: ", allGamesDataString);
       const allGamesData = allGamesDataString ? JSON.parse(allGamesDataString) : null;
       if (allGamesData && currentDay === null) {
         const postDay =
@@ -171,7 +170,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
         <spacer grow />
 
         {/* HStack with button and dice icon */}
-        {selectedTab === TabType.main && (
+        {selectedTab === TabType.main && (!(allGamesData?.ended ?? false) && !(gameData?.finished ?? false)) && (
           <hstack gap="small" alignment="center bottom" width={100}>
             <button
               appearance="primary"
