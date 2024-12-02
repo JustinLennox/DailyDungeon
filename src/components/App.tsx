@@ -1,23 +1,29 @@
-import { Devvit, useAsync, useState, Comment, useInterval } from '@devvit/public-api';
-import { CommentView } from './CommentView.js';
-import { DiceRollView } from './DiceRollView.js';
-import { TabsView } from './TabView.js';
-import { getRelativeTime, TabType } from '../utils/utils.js';
+// App.tsx
+import {
+  Devvit,
+  useAsync,
+  useState,
+} from "@devvit/public-api";
+import { CommentView } from "./CommentView.js";
+import { DiceRollView } from "./DiceRollView.js";
+import { TabsView } from "./TabView.js";
+import { getRelativeTime, TabType } from "../utils/utils.js";
 
 export const App = (context: Devvit.Context): JSX.Element => {
-
   const [showDiceRoller, setShowDiceRoller] = useState(false);
-
   const [selectedTab, setSelectedTab] = useState(TabType.main);
 
-  // Fetch game data from Redis
+  // State for current day
+  const [currentDay, setCurrentDay] = useState<number | null>(null);
+
+  // Fetch game data from Redis using useAsync
   const {
     data: allGamesData,
     loading: loadingAllGamesData,
     error: allGamesDataError,
   } = useAsync(async () => {
     try {
-      const allGamesDataString = await context.redis.get('game');
+      const allGamesDataString = await context.redis.get("game");
       console.log("String: ", allGamesDataString);
       return allGamesDataString ? JSON.parse(allGamesDataString) : null;
     } catch (e) {
@@ -26,56 +32,69 @@ export const App = (context: Devvit.Context): JSX.Element => {
     }
   });
 
-  // Parse game data and get the latest message
-  const postNumber = (allGamesData && allGamesData.posts && context.postId) ? allGamesData.posts[context.postId] : null;
-  const gameData = (postNumber != null && allGamesData && allGamesData.contentArray)
-    ? allGamesData.contentArray[postNumber]
-    : null;
-  console.log("Client reloaded with id, post number, gameData text: ", context.postId, postNumber, gameData);
+  // Determine the maximum day (currentDay from game data)
+  const maxDay =
+    allGamesData && typeof allGamesData.currentDay === "number"
+      ? allGamesData.currentDay
+      : 0;
 
+  // Set initial currentDay based on context.postId and allGamesData
+  if (allGamesData && currentDay === null) {
+    const postDay =
+      allGamesData.posts && context.postId
+        ? allGamesData.posts[context.postId]
+        : null;
+    if (postDay !== null && postDay !== undefined) {
+      setCurrentDay(postDay);
+    } else {
+      setCurrentDay(maxDay);
+    }
+  }
 
-  // // Fetch top Reddit comment
-  // const {
-  //   data: topCommentJSON,
-  //   loading: loadingTopComment,
-  //   error: topCommentError,
-  // } = useAsync(
-  //   async () => {
-  //     console.log("Fetching top comment");
-  //     return null;
-  //     // console.log("fetching top comment for ", context.postId);
-  //     // if (!context.postId && !gameData.topComment) { return null };
-  //     // const postID = context.postId;
+  // Get the postID for the current day
+  const currentPostID =
+    allGamesData &&
+    allGamesData.contentArray &&
+    allGamesData.contentArray[currentDay ?? 0]?.postID;
 
-  //     // // if (!latestMessage || !latestMessage.postID) return null;
-  //     // // const postID = latestMessage.postID;
+  const gameData =
+    allGamesData &&
+      allGamesData.contentArray &&
+      allGamesData.contentArray[currentDay ?? 0]
+      ? allGamesData.contentArray[currentDay ?? 0]
+      : null;
 
-  //     // console.log("loaded top comment: ", topComment.body);
-  //     // const editedComment = { ...topComment, dateString: getRelativeTime(topComment.createdAt) };
-  //     // return JSON.stringify(editedComment);
-  //   },
-  //   { depends: [gameData?.postID] }
-  // );
+  console.log(
+    "Client reloaded with currentDay, postID, gameData text: ",
+    currentDay,
+    currentPostID,
+    gameData?.text
+  );
 
   const castVoteButtonPressed = async () => {
     try {
-      const redditPostID = context.postId;
-      if (redditPostID) {
-        const post = await context.reddit.getPostById(redditPostID);
+      if (currentPostID) {
+        const post = await context.reddit.getPostById(currentPostID);
         context.ui.navigateTo(post);
       } else {
-        context.ui.showToast(`No reddit post ID`);
+        context.ui.showToast(`No Reddit post ID`);
       }
     } catch (e) {
       console.error("Cast vote failed: ", e);
       context.ui.showToast(`${e}`);
     }
-  }
+  };
 
   // Render the component
   return (
-    <zstack width={100} height={100} padding='none' gap='none' alignment='center middle'>
-      {allGamesData && allGamesData.showBackground &&
+    <zstack
+      width={100}
+      height={100}
+      padding="none"
+      gap="none"
+      alignment="center middle"
+    >
+      {allGamesData && allGamesData.showBackground && (
         <vstack width={100} height={100}>
           <image
             url="BackgroundLoop.gif"
@@ -83,12 +102,30 @@ export const App = (context: Devvit.Context): JSX.Element => {
             height={100}
             imageWidth={640}
             imageHeight={640}
-            resizeMode='cover'
+            resizeMode="cover"
           />
         </vstack>
-      }
-      <vstack padding="small" cornerRadius="medium" gap="small" alignment="center" width={100} height={100}>
-        {TabsView(context, gameData, selectedTab, setSelectedTab)}
+      )}
+      <vstack
+        padding="small"
+        cornerRadius="medium"
+        gap="small"
+        alignment="center"
+        width={100}
+        height={100}
+      >
+        {/* Tabs View */}
+        {allGamesData && (
+          <TabsView
+            context={context}
+            game={gameData}
+            selectedTab={selectedTab}
+            setSelectedTab={setSelectedTab}
+            currentDay={currentDay ?? 0}
+            setCurrentDay={setCurrentDay}
+            maxDay={maxDay}
+          />
+        )}
         {/* Loading and error states for game data */}
         {loadingAllGamesData && <text wrap>Loading game data...</text>}
         {allGamesDataError && <text wrap>Error loading game data.</text>}
@@ -96,47 +133,61 @@ export const App = (context: Devvit.Context): JSX.Element => {
         <spacer grow />
 
         {/* Game View */}
-        {gameData && (
-          <vstack padding="medium" cornerRadius="medium" gap="small" minWidth={50} backgroundColor='rgba(0,0,0,0.8)'>
-            {/* {((context.dimensions?.width ?? 0) > 500) && (<hstack>
-              <text wrap weight='bold' size='small' color='gray'>
-                From the dungeon…
-              </text>
-              <spacer grow />
-            </hstack>)} */}
-            {/* <vstack alignment='center middle' padding='small'> */}
-              <text wrap size='medium' weight='bold' alignment='center middle' color='white' width={100}>{gameData.text}</text>
-            {/* </vstack> */}
+        {selectedTab === TabType.main && gameData && (
+          <vstack
+            padding="medium"
+            cornerRadius="medium"
+            gap="small"
+            minWidth={50}
+            backgroundColor="rgba(0,0,0,0.8)"
+          >
+            <text
+              wrap
+              size="medium"
+              weight="bold"
+              alignment="center middle"
+              color="white"
+              width={100}
+            >
+              {gameData.text}
+            </text>
           </vstack>
         )}
 
-        {gameData && gameData.topComment && (CommentView(context, gameData.topComment))}
+        {/* Past Days or Other Tabs */}
+        {selectedTab !== TabType.main && (
+          <vstack>
+            {/* Render content for other tabs here */}
+            <text>Content for selected tab goes here.</text>
+          </vstack>
+        )}
+
+        {gameData && gameData.topComment && selectedTab === TabType.main && (
+          CommentView(context, gameData.topComment)
+        )}
 
         <spacer grow />
 
         {/* HStack with button and dice icon */}
-        <hstack gap="small" alignment="center bottom" width={100}>
-          <button
-            appearance="primary"
-            grow
-            onPress={async () => { await castVoteButtonPressed() }}
-          >
-            Cast your vote!
-          </button>
-          <button icon="random" onPress={() => { setShowDiceRoller(true) }}>Roll</button>
-        </hstack>
+        {selectedTab === TabType.main && (
+          <hstack gap="small" alignment="center bottom" width={100}>
+            <button
+              appearance="primary"
+              grow
+              onPress={async () => {
+                await castVoteButtonPressed();
+              }}
+            >
+              Cast your vote!
+            </button>
+            <button icon="random" onPress={async () => setShowDiceRoller(true)}>
+              Roll
+            </button>
+          </hstack>
+        )}
       </vstack>
 
-      {showDiceRoller && (
-        DiceRollView(context, gameData, setShowDiceRoller)
-      )}
+      {showDiceRoller && DiceRollView(context, gameData, setShowDiceRoller)}
     </zstack>
   );
 };
-
-// Register the custom post type or component
-Devvit.addCustomPostType({
-  name: 'RedditPlaysDnD',
-  description: 'An interactive Reddit DnD game.',
-  render: App,
-});

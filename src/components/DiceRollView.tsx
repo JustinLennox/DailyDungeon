@@ -97,7 +97,7 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 					<button
 						size='small'
 						icon="close-fill"
-						onPress={() => { setShowDiceView(false) }}
+						onPress={async () => { setShowDiceView(false) }}
 					/>
 					<spacer grow />
 					<text wrap style='heading'>
