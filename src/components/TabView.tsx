@@ -37,8 +37,9 @@ export const TabsView = ({
 		return (
 			<vstack>
 				<button
-					appearance="plain"
+					appearance="media"
 					size="small"
+					textColor="white"
 					onPress={async () => setSelectedTab(tabType)}
 				>
 					{getTabTitle(tabType)}
@@ -59,30 +60,25 @@ export const TabsView = ({
 				<>
 					{/* Furthest Left Arrow (Jump to Day 0) */}
 					{currentDay > 0 && (
-						<vstack gap="none" alignment="center">
-							<button
-								icon="caret-left-fill"
-								appearance="plain"
-								size="small"
-								textColor="white"
-								onPress={async () => setCurrentDay(0)}
-							/>
-							<hstack
-								height="1.5px"
-								width="5px"
-								backgroundColor="white"
-							></hstack>
-						</vstack>
+						<button
+							appearance="media"
+							size="medium"
+							textColor="white"
+							onPress={async () => setCurrentDay(0)}
+						>
+							⇤
+						</button>
 					)}
 					{/* Left Arrow (Previous Day) */}
 					{currentDay > 0 && (
 						<button
-							icon="caret-left"
-							appearance="plain"
-							size="small"
+							appearance="media"
+							size="medium"
 							textColor="white"
 							onPress={async () => setCurrentDay(currentDay - 1)}
-						/>
+						>
+							←
+						</button>
 					)}
 				</>
 			)}
@@ -94,35 +90,30 @@ export const TabsView = ({
 					{/* Right Arrow (Next Day) */}
 					{currentDay < maxDay && (
 						<button
-							icon="caret-right"
-							appearance="plain"
-							size="small"
+							appearance="media"
+							size="medium"
 							textColor="white"
-							onPress={async () => { 
+							onPress={async () => {
 								console.log("Current day is ", currentDay);
 								setCurrentDay(currentDay + 1);
 							}}
-						/>
+						>
+							→
+						</button>
 					)}
 					{/* Furthest Right Arrow (Jump to Latest Day) */}
 					{currentDay < maxDay && (
-						<vstack gap="none" alignment="center middle">
-							<button
-								icon="caret-right-fill"
-								appearance="plain"
-								size="small"
-								textColor="white"
-								onPress={async () => { 
-									console.log("Far right");
-									setCurrentDay(maxDay);
-								}}
-							/>
-							<hstack
-								height="1.5px"
-								width="5px"
-								backgroundColor="white"
-							></hstack>
-						</vstack>
+						<button
+							appearance="media"
+							size="medium"
+							textColor="white"
+							onPress={async () => {
+								console.log("Far right");
+								setCurrentDay(maxDay);
+							}}
+						>
+							⇥
+						</button>
 					)}
 				</>
 			)}

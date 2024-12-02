@@ -64,9 +64,13 @@ export const CommentView = (context: Devvit.Context, comment: any): JSX.Element 
 							url={"D20Icon.png"}
 							imageHeight={20}
 							imageWidth={20}
-							resizeMode='cover'
+							resizeMode='fit'
 						/>
-						<text size='small' weight='bold' color={comment.diceRoll === 20 ? "yellow" : comment.diceRoll === 1 ? "red" : "white"}>
+						<text size='medium'
+							weight='bold'
+							color={comment.diceRoll === 20 ? "darkgoldenrod" : (comment.diceRoll === 1 ? "firebrick" : "white")}
+							outline='thick'
+						>
 							{comment.diceRoll}
 						</text>
 					</zstack>
@@ -86,7 +90,7 @@ export const CommentView = (context: Devvit.Context, comment: any): JSX.Element 
 			{/* </hstack> */}
 			<hstack gap='small' alignment='start middle'>
 				<icon name="upvote-fill" color="upvote-plain" size='small' />
-				<text size='small'>{comment.score}</text>
+				<text size='small' weight='bold'>{comment.score}</text>
 				<spacer grow />
 				<hstack
 					onPress={async () => { await navigateToComment() }}
