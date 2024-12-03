@@ -54,7 +54,12 @@ export const CommentView = ({
 
 	return (
 		<vstack padding="medium" cornerRadius="medium" gap="small" backgroundColor='secondary-background' minWidth={50}
-			maxHeight={commentExpanded ? 90 : textExpanded ? 10 : 50}
+			maxHeight={commentExpanded ? 90 : textExpanded ? 10 : 66}
+			width={100}
+			onPress={() => {
+				setCommentExpanded(!commentExpanded);
+				setTextExpanded(false);
+			}}
 		>
 			<hstack gap='small' width={100}>
 				<hstack width='20px' height='20px' cornerRadius='full'>
@@ -102,10 +107,6 @@ export const CommentView = ({
 				alignment='center middle'
 				overflow='ellipsis'
 				width={100}
-				onPress={() => { 
-					setCommentExpanded(!commentExpanded) 
-					setTextExpanded(commentExpanded);
-				}}
 			>
 				{comment.body}
 			</text>

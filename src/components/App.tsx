@@ -134,53 +134,56 @@ export const App = (context: Devvit.Context): JSX.Element => {
 
         <spacer grow />
 
-        {/* Game View */}
-        {selectedTab === TabType.main && gameData && (
-          <vstack
-            padding="medium"
-            cornerRadius="medium"
-            gap="small"
-            minWidth={50}
-            backgroundColor="rgba(0,0,0,0.8)"
-            maxHeight={textExpanded ? 90 : commentExpanded ? 10 : 50}
-            onPress={() => {
-              console.log("Expanding text!");
-              setTextExpanded(!textExpanded);
-              setCommentExpanded(textExpanded);
-            }}
-          >
-            <text
-              wrap
-              size="medium"
-              weight="bold"
-              alignment="center middle"
-              color="white"
-              width={100}
+        <vstack alignment="center middle" gap="small">
+
+          {/* Game View */}
+          {selectedTab === TabType.main && gameData && (
+            <vstack
+              padding="medium"
+              cornerRadius="medium"
+              gap="small"
+              minWidth={50}
+              backgroundColor="rgba(0,0,0,0.8)"
+              maxHeight={textExpanded ? 90 : commentExpanded ? 10 : 66}
+              onPress={() => {
+                console.log("Expanding text!");
+                setTextExpanded(!textExpanded);
+                setCommentExpanded(false);
+              }}
             >
-              {textExpanded}
-              {gameData.text ?? "This dungeon is still loading..."}
-            </text>
-          </vstack>
-        )}
+              <text
+                wrap
+                size="medium"
+                weight="bold"
+                alignment="center middle"
+                color="white"
+                width={100}
+              >
+                {gameData.text ?? "This dungeon is still loading..."}
+              </text>
+            </vstack>
+          )}
 
-        {/* Past Days or Other Tabs */}
-        {selectedTab !== TabType.main && (
-          <vstack>
-            {/* Render content for other tabs here */}
-            <text>Content for selected tab goes here.</text>
-          </vstack>
-        )}
+          {/* Past Days or Other Tabs */}
+          {selectedTab !== TabType.main && (
+            <vstack>
+              {/* Render content for other tabs here */}
+              <text>Content for selected tab goes here.</text>
+            </vstack>
+          )}
 
-        {gameData && gameData.topComment && selectedTab === TabType.main && (
-          <CommentView
-            context={context}
-            comment={gameData.topComment}
-            commentExpanded={commentExpanded}
-            setCommentExpanded={setCommentExpanded}
-            textExpanded={textExpanded}
-            setTextExpanded={setTextExpanded}
-          />
-        )}
+          {gameData && gameData.topComment && selectedTab === TabType.main && (
+            <CommentView
+              context={context}
+              comment={gameData.topComment}
+              commentExpanded={commentExpanded}
+              setCommentExpanded={setCommentExpanded}
+              textExpanded={textExpanded}
+              setTextExpanded={setTextExpanded}
+            />
+          )}
+
+        </vstack>
 
         <spacer grow />
 
