@@ -47,25 +47,33 @@ export const createPost = async (context: Devvit.Context | JobContext, ui: UICli
 		const { gameData, error } = await fetchGame(subreddit.name);
 
 		if (error) {
-			throw new Error(`Fetch game error occurred`);
+			console.error(`Error fetching game data: ${error}`);
 		}
 
 		if (!gameData || Object.keys(gameData).length <= 0 || gameData.currentDay == null) {
-			console.log(`No existing game data`);
+			console.error(`This subreddit's dungeon hasn't formed yet.`);
 		}
 
-		// Increment the day for a new post
-		console.log("Incrementing current day");
-		const currentDay = (gameData?.currentDay ?? -1) + 1;
+		if (gameData.ended) {
+			console.error("This subreddit's game has ended.")
+			ui?.showToast({
+				text: `This subreddit's game has ended`,
+			});
+			return;
+		}
+
+		const currentDay = (gameData?.currentDay ?? 0);
+		console.log("Current day: "), currentDay;
+
 		let title = ""
 		if (gameData && gameData.contentArray && gameData.contentArray[currentDay]) {
-
 			console.log(`No content array for game data`);
 			const todaysGame = gameData.contentArray[currentDay];
-			const titlePrefix = gameData.titlePrefix ?? todaysGame.titlePrefix ?? `${subreddit.name} Dungeon:`;
+			const titlePrefix = gameData.titlePrefix ?? todaysGame.titlePrefix ?? `r/${subreddit.name} Dungeon:`;
 			title = todaysGame.title ?? `${titlePrefix} Day ${currentDay + 1}`;
 		} else {
-			title = `r/${subreddit.name} Dungeon`;
+			title = `r/${context.subredditName ?? "Daily"} Dungeon`;
+			console.error("This subreddit's dungeon hasn't fully formed yet.");
 		}
 
 		// Create the Reddit post with the updated title
@@ -99,7 +107,17 @@ export const createPost = async (context: Devvit.Context | JobContext, ui: UICli
 		});
 
 		if (!patchResponse.ok) {
-			throw new Error(`Error updating data: ${patchResponse.statusText}`);
+			try {
+				const patchResponse = await fetch(`${baseURL}/Subreddits/${subreddit.name}/Posts/${postID}.json`, {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify(postUpdate),
+				});
+			} catch {
+				throw new Error(`Error updating data: ${patchResponse.statusText}`);
+			}
 		}
 		console.log("Successfully updated game in Firebase");
 
@@ -118,7 +136,7 @@ export const createPost = async (context: Devvit.Context | JobContext, ui: UICli
 		console.error("Error creating post: ", e);
 		if (ui) {
 			ui.showToast({
-				text: `Failed to create your post: ${e}`,
+				text: `Failed to create post: ${e}`,
 				appearance: 'neutral',
 			});
 		}
@@ -225,7 +243,7 @@ export const updateGame = async (
 			const commentUpdate: any = { ...topComment };
 			commentUpdate.dateString = getRelativeTime(topComment.createdAt);
 			commentUpdate.diceRoll = await getUserDiceRoll(context, topComment.authorId, topComment.postId);
-			
+
 			// updatePostFallback(context, item.postID, item, commentUpdate);
 
 			if (topComment.id === item.topComment?.id && commentUpdate.diceRoll === item.topComment?.diceRoll) {
@@ -259,6 +277,30 @@ export const updateGame = async (
 		console.error(`Error in updateGame: ${e}`);
 	}
 };
+
+export const installApp = async (
+	context: Devvit.Context | JobContext
+) => {
+	const appInstallDate = new Date().toISOString();
+	if (!context.subredditName) {
+		console.error("No subreddit name for app install");
+		return;
+	}
+
+	// Prepare the content array item
+	const subredditUpdate = {
+		appInstallDate: appInstallDate
+	};
+
+	// Step 5: Make a PATCH request to update the data
+	const patchResponse = await fetch(`${baseURL}/Subreddits/${context.subredditName}/Installs/${context.subredditName}.json`, {
+		method: 'PUT',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(subredditUpdate),
+	});
+}
 
 const updatePostFallback = async (context: Devvit.Context | JobContext, postID: string, gameData: any | null, commentUpdate: any | null) => {
 	// let textFallbackRichtext = new RichTextBuilder()

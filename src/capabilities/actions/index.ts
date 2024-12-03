@@ -72,7 +72,7 @@ Devvit.addMenuItem({
       const post = await context.reddit.getPostById(existingComment.postId);
       const allGamesDataString = await context.redis.get("game");
       const allGamesData = allGamesDataString ? JSON.parse(allGamesDataString) : null;
-      const gameDay = allGamesData && allGamesData.posts && allGamesData.posts[post.id];
+      const gameDay = allGamesData && allGamesData.posts && (allGamesData.posts[post.id] ?? allGamesData.currentDay);
       const gameData = allGamesData && allGamesData.contentArray && gameDay && allGamesData.contentArray[gameDay];
       console.log("Rolling with post ID ", post.id, ", game day: ", gameDay, " and game data ", gameData);
       const diceRoll = await RollDice({ context: context, gameData: gameData, fromComments: true });

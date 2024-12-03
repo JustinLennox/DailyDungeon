@@ -49,7 +49,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
       ? allGamesData.currentDay
       : 0;
 
-  const postNumber = (allGamesData && allGamesData.posts && context.postId) ? allGamesData.posts[context.postId] : 0;
+  const postNumber = (allGamesData && allGamesData.posts && context.postId) ? allGamesData.posts[context.postId] ?? maxDay : maxDay;
 
   // Get the postID for the current day
   const currentPostID =
@@ -95,18 +95,16 @@ export const App = (context: Devvit.Context): JSX.Element => {
       gap="none"
       alignment="center middle"
     >
-      {allGamesData && allGamesData.showBackground && (
-        <vstack width={100} height={100}>
-          <image
-            url="BackgroundLoop.gif"
-            width={100}
-            height={100}
-            imageWidth={640}
-            imageHeight={640}
-            resizeMode="cover"
-          />
-        </vstack>
-      )}
+      <vstack width={100} height={100}>
+        <image
+          url="BackgroundLoop.gif"
+          width={100}
+          height={100}
+          imageWidth={640}
+          imageHeight={640}
+          resizeMode="cover"
+        />
+      </vstack>
       <vstack
         padding="small"
         cornerRadius="medium"
@@ -150,7 +148,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
               color="white"
               width={100}
             >
-              {gameData.text}
+              {gameData.text ?? "This dungeon is still loading..."}
             </text>
           </vstack>
         )}

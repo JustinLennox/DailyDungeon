@@ -3,7 +3,7 @@ import './capabilities/actions/index.js';
 import { App } from './components/App.js';
 import { Devvit, JobContext, MediaPlugin, RedditAPIClient, RedisClient, ScheduledCronJob, ScheduledJob, Scheduler, UIClient } from '@devvit/public-api';
 import { CreatePreview } from './components/Preview.js';
-import { createPost, fetchGame, updateGame } from './api/api.js';
+import { createPost, fetchGame, installApp, updateGame } from './api/api.js';
 
 // Define what packages you want to use
 Devvit.configure({
@@ -27,6 +27,7 @@ Devvit.addMenuItem({
   onPress: async (_event, context) => {
     await AddScheduledPostJob(context.scheduler, context.redis, context.ui);
     await AddUpdatePostJob(context.scheduler, context.redis, context.ui);
+    await installApp(context);
   },
 });
 
@@ -35,6 +36,7 @@ Devvit.addTrigger({
   onEvent: async (_, context) => {
     await AddScheduledPostJob(context.scheduler, context.redis, undefined);
     await AddUpdatePostJob(context.scheduler, context.redis, undefined);
+    await installApp(context);
   },
 });
 
