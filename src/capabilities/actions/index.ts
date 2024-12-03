@@ -113,7 +113,7 @@ Devvit.addMenuItem({
         richtext: richtext,
       });
       context.ui.showToast(`You rolled: ${diceRoll}!`)
-      context.ui.navigateTo(existingComment);
+      context.ui.navigateTo(comment);
     } catch (err) {
       console.error(`Error rolling dice: ${err}`);
       context.ui.showToast("Something went wrong rolling the dice.");
