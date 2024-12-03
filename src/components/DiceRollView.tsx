@@ -75,7 +75,7 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 					/>
 				}
 				{/* Display dice roll totals */}
-				{(userRollError || userRoll) && topRolls &&
+				{topRolls &&
 					<hstack>
 						<text wrap>{`Today's Top Roll: ${topRolls.topRoll} (${topRolls.topCount} users)`}</text>
 					</hstack>

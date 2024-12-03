@@ -4,22 +4,28 @@ Daily Dungeon is a collaborative role-playing game (RPG) that unfolds on Reddit.
 
 ## How to Play
 
-### 1. Join a Participating Subreddit
+### 1. Join a Participating Subreddit (such as r/DailyDungeon)
 
-- Find and subscribe to a subreddit that has the DungeonDaily app installed.
+- Find and subscribe to a subreddit that has the Daily Dungeon app installed.
 
 ### 2. Watch for Game Posts
 
-- Look out for posts made by the DungeonDaily app. These posts will contain game scenarios, quests, or story updates.
+- Look out for posts made by the Daily Dungeon app. These posts will contain game scenarios, quests, or story updates. The Daily Dungeon app automatically creates a new post at 10AM eastern time every day!
 
 ### 3. Participate by Commenting
 
 - Engage with the game by commenting on these posts.
-- Your comments represent your in-game actions, choices, or dialogue.
+- At the end of every day, the top-voted comment on the post will be selected as the action the shared subreddit's character takes.
 
-### 4. Influence the Story
+### 4. Roll for It!
 
-- The DungeonDaily app processes player comments to advance the game.
+- Tap the 'Roll' button to roll a d20 die. Better rolls lead to better outcomes!
+- Daily Dungeon automatically pairs your roll with your comment.
+- You can also open the comment menu and choose 'Reply with Dice Roll' to have the app show other redditors what your roll was! A high roll might influence others to vote for your comment!
+
+### 5. Influence the Story
+
+- The Daily Dungeon app processes the subreddit's top comment for the day to advance the game.
 - Collaborate or compete with other players to shape the outcome.
 
 ## Features
@@ -30,5 +36,5 @@ Daily Dungeon is a collaborative role-playing game (RPG) that unfolds on Reddit.
 
 ## Getting Started
 
-- **Step 1**: Subscribe to a subreddit using DungeonDaily.
+- **Step 1**: Subscribe to a subreddit using Daily Dungeon.
 - **Step 2**: Read the latest game post from the Dungeon

@@ -50,7 +50,7 @@ export const RollDice = async (params: RollDiceParams): Promise<number | null> =
 
 		await params.context.redis.hSet(getUserPostRollKey(params.gameData.postID), userRollIncr);
 		await params.context.redis.expire(getUserPostRollKey(params.gameData.postID), ExpireTime.day);
-
+		console.log("Dice roll total key: ", getDiceRollTotalKey(params.gameData.postID));
 		// Save back to Redis
 		await params.context.redis.hIncrBy(getDiceRollTotalKey(params.gameData.postID), diceRoll.toString(), 1);
 		await params.context.redis.expire(getDiceRollTotalKey(params.gameData.postID), ExpireTime.day);

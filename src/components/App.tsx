@@ -13,6 +13,9 @@ export const App = (context: Devvit.Context): JSX.Element => {
   const [showDiceRoller, setShowDiceRoller] = useState(false);
   const [selectedTab, setSelectedTab] = useState(TabType.main);
 
+  const [textExpanded, setTextExpanded] = useState<boolean>(false);
+  const [commentExpanded, setCommentExpanded] = useState<boolean>(false);
+
   // State for current day
   const [currentDay, setCurrentDay] = useState<number | null>(null);
 
@@ -139,6 +142,12 @@ export const App = (context: Devvit.Context): JSX.Element => {
             gap="small"
             minWidth={50}
             backgroundColor="rgba(0,0,0,0.8)"
+            maxHeight={textExpanded ? 90 : commentExpanded ? 10 : 50}
+            onPress={() => {
+              console.log("Expanding text!");
+              setTextExpanded(!textExpanded);
+              setCommentExpanded(textExpanded);
+            }}
           >
             <text
               wrap
@@ -148,6 +157,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
               color="white"
               width={100}
             >
+              {textExpanded}
               {gameData.text ?? "This dungeon is still loading..."}
             </text>
           </vstack>
@@ -162,7 +172,14 @@ export const App = (context: Devvit.Context): JSX.Element => {
         )}
 
         {gameData && gameData.topComment && selectedTab === TabType.main && (
-          CommentView(context, gameData.topComment)
+          <CommentView
+            context={context}
+            comment={gameData.topComment}
+            commentExpanded={commentExpanded}
+            setCommentExpanded={setCommentExpanded}
+            textExpanded={textExpanded}
+            setTextExpanded={setTextExpanded}
+          />
         )}
 
         <spacer grow />

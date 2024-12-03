@@ -1,6 +1,22 @@
-import { Devvit, useAsync, useState, Comment } from '@devvit/public-api';
+import { Devvit, useAsync, useState, Comment, StateSetter } from '@devvit/public-api';
 
-export const CommentView = (context: Devvit.Context, comment: any): JSX.Element => {
+interface CommentViewProps {
+	context: Devvit.Context;
+	comment: any;
+	commentExpanded: boolean;
+	textExpanded: boolean;
+	setCommentExpanded: StateSetter<boolean>;
+	setTextExpanded: StateSetter<boolean>;
+}
+
+export const CommentView = ({
+	context,
+	comment,
+	commentExpanded,
+	textExpanded,
+	setCommentExpanded,
+	setTextExpanded
+}: CommentViewProps): JSX.Element => {
 
 	// const {
 	// 	data: snooURL,
@@ -37,7 +53,9 @@ export const CommentView = (context: Devvit.Context, comment: any): JSX.Element 
 	}
 
 	return (
-		<vstack padding="medium" cornerRadius="medium" gap="small" backgroundColor='secondary-background' minWidth={50}>
+		<vstack padding="medium" cornerRadius="medium" gap="small" backgroundColor='secondary-background' minWidth={50}
+			maxHeight={commentExpanded ? 90 : textExpanded ? 10 : 50}
+		>
 			<hstack gap='small' width={100}>
 				<hstack width='20px' height='20px' cornerRadius='full'>
 					<image
@@ -84,6 +102,10 @@ export const CommentView = (context: Devvit.Context, comment: any): JSX.Element 
 				alignment='center middle'
 				overflow='ellipsis'
 				width={100}
+				onPress={() => { 
+					setCommentExpanded(!commentExpanded) 
+					setTextExpanded(commentExpanded);
+				}}
 			>
 				{comment.body}
 			</text>
