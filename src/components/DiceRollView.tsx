@@ -1,8 +1,8 @@
 import { Devvit, useAsync, useState, Comment } from '@devvit/public-api';
 import { ExpireTime, StringDictionary } from '../utils/utils.js';
+import { RollDice, getDiceRollTotalKey } from '../api/RollDice.js';
 
 export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDiceView: any): JSX.Element => {
-	const totalKey = `rollTotals:${gameData?.postID ?? "default"}`;
 
 	const {
 		data: userRoll,
@@ -10,52 +10,12 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 		error: userRollError,
 	} = useAsync(
 		async () => {
-			if (!gameData || !gameData.postID) {
-				throw new Error("no-post-data");
-			};
-			if (gameData.finished) {
-				throw new Error("post-finished");
-			};
-
 			try {
-				// Get user ID
-				const user = await context.reddit.getCurrentUser();
-				const userID = user?.id ?? "anonymous";
-				const postUserRollsKey = `userRolls:${gameData.postID}`;
-				if (user) {
-					// Check if the user has already rolled the dice for the latest post ID
-					const userRolled = await context.redis.hGet(postUserRollsKey, userID);
-					const roll = userRolled ? parseInt(userRolled) : NaN;
-					if (userRolled && !Number.isNaN(roll)) {
-						// context.ui.showToast(`You have already rolled ${roll} for this post.`);
-						return roll;
-					}
-				} else {
-					return null;
-				}
-
-				// User has not rolled yet
-
-				// Simulate dice roll
-				const diceCount = 20;
-				const diceRoll = Math.floor(Math.random() * diceCount) + 1;
-
-				// Store the user's dice roll
-				const userRollIncr: StringDictionary = {};
-				userRollIncr[userID] = diceRoll.toString()
-
-				await context.redis.hSet(postUserRollsKey, userRollIncr);
-				await context.redis.expire(postUserRollsKey, ExpireTime.day);
-
-				// Save back to Redis
-				await context.redis.hIncrBy(totalKey, diceRoll.toString(), 1);
-				await context.redis.expire(totalKey, ExpireTime.day);
-
-				return diceRoll;
-			} catch (e) {
-				console.error('Error during dice roll:', e);
-				context.ui.showToast(`An error occurred rolling the dice. (${e})`);
-				throw new Error('dice-error');
+				return await RollDice({ context: context, gameData: gameData, fromComments: false });
+			} catch (err) {
+				console.error(`Error rolling dice: ${err}`);
+				context.ui.showToast("Something went wrong rolling the dice.");
+				return null;
 			}
 		}, { depends: [gameData?.postID] }
 	);
@@ -68,7 +28,7 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 	} = useAsync(
 		async () => {
 			if (!gameData || !gameData.postID) return null;
-			const rollTotals = (await context.redis.hGetAll(totalKey)) ?? {};
+			const rollTotals = (await context.redis.hGetAll(getDiceRollTotalKey(gameData))) ?? {};
 
 			// Find the top roll
 			let topRoll = '';
@@ -101,10 +61,10 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 					/>
 					<spacer grow />
 					<text wrap style='heading'>
-						{!loadingUserRoll && !userRollError && userRoll ? `You rolled a ${userRoll}!` : "Rolling…"}
+						{!loadingUserRoll && !userRollError && userRoll ? `You rolled: ${userRoll}!` : "Rolling…"}
 					</text>
 					<spacer grow />
-					<spacer width={'20px'}/>
+					<spacer width={'20px'} />
 				</hstack>
 				{!userRollError &&
 					<image

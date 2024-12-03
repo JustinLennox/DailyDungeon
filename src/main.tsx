@@ -20,14 +20,15 @@ Devvit.addCustomPostType({
   render: App,
 });
 
-// Devvit.addMenuItem({
-//   label: "Update Reddit Plays DnD",
-//   location: 'subreddit',
-//   onPress: async (_event, context) => {
-//     await AddScheduledPostJob(context.scheduler, context.redis, context.ui);
-//     await AddUpdatePostJob(context.scheduler, context.redis, context.ui);
-//   },
-// });
+Devvit.addMenuItem({
+  label: "Update Reddit Plays DnD",
+  location: 'subreddit',
+  forUserType: 'moderator',
+  onPress: async (_event, context) => {
+    await AddScheduledPostJob(context.scheduler, context.redis, context.ui);
+    await AddUpdatePostJob(context.scheduler, context.redis, context.ui);
+  },
+});
 
 Devvit.addTrigger({
   event: 'AppInstall',
@@ -114,6 +115,23 @@ Devvit.addSchedulerJob({
     } catch (e) {
       console.error(e);
     }
+  },
+});
+
+Devvit.addMenuItem({
+  label: "Stop Reddit Plays DnD Posts",
+  location: 'subreddit',
+  forUserType: 'moderator',
+  onPress: async (_event, context) => {
+    const updateJobID = await context.redis.get('update_post_jobId');
+    if (updateJobID) {
+      context.scheduler.cancelJob(updateJobID);
+    }
+    const dailyPostJobID = await context.redis.get('daily_post_jobId');
+    if (dailyPostJobID) {
+      context.scheduler.cancelJob(dailyPostJobID);
+    }
+
   },
 });
 

@@ -1,4 +1,4 @@
-import { Comment, Devvit, JobContext, MediaPlugin, RedditAPIClient, RedisClient, ScheduledCronJob, ScheduledJob, Scheduler, UIClient, useForm } from '@devvit/public-api';
+import { Comment, Devvit, JobContext, MediaPlugin, RedditAPIClient, RedisClient, RichTextBuilder, ScheduledCronJob, ScheduledJob, Scheduler, UIClient, useForm } from '@devvit/public-api';
 import { CreatePreview } from '../components/Preview.js';
 import { getRelativeTime, StringDictionary } from '../utils/utils.js';
 
@@ -140,7 +140,7 @@ const getTopComment = async (context: Devvit.Context | JobContext, postID: strin
 	return topComment;
 }
 
-const getUserDiceRoll = async (context: Devvit.Context | JobContext, userID: string | null | undefined, postID: string | null): Promise<number | null> => {
+export const getUserDiceRoll = async (context: Devvit.Context | JobContext, userID: string | null | undefined, postID: string | null | undefined): Promise<number | null> => {
 	if (!userID) {
 		console.log("Can't get dice roll for no user ID");
 		return null;
@@ -218,12 +218,15 @@ export const updateGame = async (
 			const topComment = await getTopComment(context, postID);
 			if (!topComment) {
 				console.log("Couldn't get top comment for post ", postID);
+				// updatePostFallback(context, item.postID, item, null);
 				continue;
 			}
 
 			const commentUpdate: any = { ...topComment };
 			commentUpdate.dateString = getRelativeTime(topComment.createdAt);
 			commentUpdate.diceRoll = await getUserDiceRoll(context, topComment.authorId, topComment.postId);
+			
+			// updatePostFallback(context, item.postID, item, commentUpdate);
 
 			if (topComment.id === item.topComment?.id && commentUpdate.diceRoll === item.topComment?.diceRoll) {
 				console.log(`Top comment is already top comment with id ${topComment.id} and dice roll ${commentUpdate.diceRoll}, skipping`);
@@ -256,3 +259,22 @@ export const updateGame = async (
 		console.error(`Error in updateGame: ${e}`);
 	}
 };
+
+const updatePostFallback = async (context: Devvit.Context | JobContext, postID: string, gameData: any | null, commentUpdate: any | null) => {
+	// let textFallbackRichtext = new RichTextBuilder()
+	// 	.paragraph((p) => {
+	// 		p.text({text: gameData?.text ?? "This is a Daily Dungeon post. Please view it on new reddit!"})
+	// 	})
+	// if (commentUpdate) {
+	// 	textFallbackRichtext
+	// 	.paragraph((p) => {
+	// 		p.userLink({username: commentUpdate.authorName, showPrefix: true})
+	// 	})
+	// 	.paragraph((p) => {
+	// 		p.text({text: `${commentUpdate.body}`})
+	// 	})
+	// }
+
+	// const post = await context.reddit.getPostById(postID);
+	// await post.setTextFallback({richtext: textFallbackRichtext});
+}
