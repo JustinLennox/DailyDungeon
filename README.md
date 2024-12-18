@@ -38,3 +38,10 @@ Daily Dungeon is a collaborative role-playing game (RPG) that unfolds on Reddit.
 
 - **Step 1**: Subscribe to a subreddit using Daily Dungeon.
 - **Step 2**: Read the latest game post from the Dungeon
+
+## Changelog
+
+### 0.0.5
+    - Added a 'How To Play' tab explaining the rules
+    - Added explainer text to the dice roll view
+    - Changed the 'Cast your vote' button to 'View Comments'

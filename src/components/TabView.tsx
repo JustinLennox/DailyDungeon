@@ -1,5 +1,5 @@
 // TabView.tsx
-import { Devvit, StateSetter } from "@devvit/public-api";
+import { Devvit, IconName, StateSetter } from "@devvit/public-api";
 import { TabType } from "../utils/utils.js";
 
 interface TabsViewProps {
@@ -27,9 +27,20 @@ export const TabsView = ({
 				return currentDay !== undefined ? `Day ${currentDay + 1}` : `${currentDay}`;
 			case TabType.past:
 				return "Past Days";
+			case TabType.howTo:
+				return "How To Play"
 			// Add more tabs here as needed
 			default:
 				return "";
+		}
+	};
+
+	const getTabIcon = (tab: TabType): IconName | undefined => {
+		switch (tab) {
+			case TabType.howTo:
+				return "help";
+			default:
+				return undefined;
 		}
 	};
 
@@ -40,6 +51,7 @@ export const TabsView = ({
 					appearance="media"
 					size="small"
 					textColor="white"
+					icon={getTabIcon(tabType)}
 					onPress={async () => setSelectedTab(tabType)}
 				>
 					{getTabTitle(tabType)}
@@ -117,6 +129,8 @@ export const TabsView = ({
 					)}
 				</>
 			)}
+			<spacer grow />
+			{TabView(TabType.howTo)}
 		</hstack>
 	);
 };

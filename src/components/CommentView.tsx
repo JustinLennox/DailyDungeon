@@ -54,7 +54,7 @@ export const CommentView = ({
 
 	return (
 		<vstack padding="medium" cornerRadius="medium" gap="small" backgroundColor='secondary-background' minWidth={50}
-			maxHeight={commentExpanded ? 90 : textExpanded ? 10 : 66}
+			maxHeight={textExpanded ? 10 : undefined}
 			width={100}
 			onPress={() => {
 				setCommentExpanded(!commentExpanded);

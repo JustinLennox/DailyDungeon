@@ -51,8 +51,14 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 	);
 
 	return (
-		<vstack alignment='center middle' height={100}>
-			<vstack backgroundColor='neutral-background' padding="medium" cornerRadius="medium" gap="medium" alignment="center">
+		<vstack alignment='center middle' height={100} width={100} padding="medium" >
+			<vstack 
+			backgroundColor='neutral-background' 
+			padding="medium" 
+			cornerRadius="medium" 
+			gap="medium" 
+			width={80}
+			alignment="center">
 				<hstack alignment='center middle' width={100}>
 					<button
 						size='small'
@@ -61,7 +67,7 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 					/>
 					<spacer grow />
 					<text wrap style='heading'>
-						{!loadingUserRoll && !userRollError && userRoll ? `You rolled: ${userRoll}!` : "Rolling…"}
+						{!loadingUserRoll && !userRollError && userRoll ? `Your daily roll: ${userRoll}!` : "Rolling…"}
 					</text>
 					<spacer grow />
 					<spacer width={'20px'} />
@@ -74,6 +80,12 @@ export const DiceRollView = (context: Devvit.Context, gameData: any, setShowDice
 						description="Rolling Die"
 					/>
 				}
+				<text wrap 
+				alignment='center middle'
+				width={100}
+				>
+					Your roll is linked to your comments. If your comment is chosen, a higher roll leads to better outcomes for your action! You can only roll once per day.
+					</text>
 				{/* Display dice roll totals */}
 				{topRolls &&
 					<hstack>

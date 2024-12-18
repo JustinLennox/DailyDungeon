@@ -8,6 +8,7 @@ import { CommentView } from "./CommentView.js";
 import { DiceRollView } from "./DiceRollView.js";
 import { TabsView } from "./TabView.js";
 import { getRelativeTime, TabType } from "../utils/utils.js";
+import { HowToView } from "./HowToView.js";
 
 export const App = (context: Devvit.Context): JSX.Element => {
   const [showDiceRoller, setShowDiceRoller] = useState(false);
@@ -80,8 +81,9 @@ export const App = (context: Devvit.Context): JSX.Element => {
       if (currentPostID) {
         const post = await context.reddit.getPostById(currentPostID);
         context.ui.navigateTo(post);
-      } else {
-        context.ui.showToast(`No Reddit post ID`);
+      } else if (context.postId) {
+        const post = await context.reddit.getPostById(context.postId);
+        context.ui.navigateTo(post);
       }
     } catch (e) {
       console.error("Cast vote failed: ", e);
@@ -134,7 +136,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
 
         <spacer grow />
 
-        <vstack alignment="center middle" gap="small">
+        <vstack alignment="center middle" gap="small" width={100}>
 
           {/* Game View */}
           {selectedTab === TabType.main && gameData && (
@@ -143,8 +145,9 @@ export const App = (context: Devvit.Context): JSX.Element => {
               cornerRadius="medium"
               gap="small"
               minWidth={50}
+              maxWidth={100}
               backgroundColor="rgba(0,0,0,0.8)"
-              maxHeight={textExpanded ? 90 : commentExpanded ? 10 : 66}
+              maxHeight={commentExpanded ? 10 : undefined}
               onPress={() => {
                 console.log("Expanding text!");
                 setTextExpanded(!textExpanded);
@@ -165,11 +168,8 @@ export const App = (context: Devvit.Context): JSX.Element => {
           )}
 
           {/* Past Days or Other Tabs */}
-          {selectedTab !== TabType.main && (
-            <vstack>
-              {/* Render content for other tabs here */}
-              <text>Content for selected tab goes here.</text>
-            </vstack>
+          {selectedTab === TabType.howTo && (
+            <HowToView context={context} setSelectedTab={setSelectedTab} />
           )}
 
           {gameData && gameData.topComment && selectedTab === TabType.main && (
@@ -197,7 +197,7 @@ export const App = (context: Devvit.Context): JSX.Element => {
                 await castVoteButtonPressed();
               }}
             >
-              Cast your vote!
+              View Comments
             </button>
             <button icon="random" onPress={async () => setShowDiceRoller(true)}>
               Roll
