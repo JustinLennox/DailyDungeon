@@ -1,0 +1,1 @@
+export const baseURL = "https://gwamps-quest-default-rtdb.firebaseio.com/RedditPlaysDnD";

@@ -1,11 +1,10 @@
 import { Comment, Devvit, JobContext, MediaPlugin, RedditAPIClient, RedisClient, RichTextBuilder, ScheduledCronJob, ScheduledJob, Scheduler, UIClient, useForm } from '@devvit/public-api';
 import { CreatePreview } from '../components/Preview.js';
 import { getRelativeTime, StringDictionary } from '../utils/utils.js';
+import { baseURL } from '../utils/Constants.js';
 
 // const DEFAULT_REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 const DEFAULT_REFRESH_INTERVAL = 60000;
-
-const baseURL = "https://gwamps-quest-default-rtdb.firebaseio.com/RedditPlaysDnD"
 
 const getGameURL = (subredditName: string): string => {
 	return `${baseURL}/Subreddits/${subredditName}/games/${subredditName}.json`;
@@ -272,6 +271,16 @@ export const updateGame = async (
 			} else {
 				console.log('Game data updated successfully');
 			}
+
+			const mapKey = `${baseURL}/Subreddits/${subredditName}/CommentToPostMap/${topComment.id}.json`;
+			await fetch(mapKey, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					postID: postID,
+					subreddit: subredditName
+				}),
+			});
 		}
 	} catch (e) {
 		console.error(`Error in updateGame: ${e}`);

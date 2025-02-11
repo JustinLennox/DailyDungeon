@@ -4,6 +4,7 @@ import { App } from './components/App.js';
 import { Devvit, JobContext, MediaPlugin, RedditAPIClient, RedisClient, ScheduledCronJob, ScheduledJob, Scheduler, UIClient } from '@devvit/public-api';
 import { CreatePreview } from './components/Preview.js';
 import { createPost, fetchGame, installApp, updateGame } from './api/api.js';
+import { handleCommentDelete } from './api/handleCommentDelete.js';
 
 // Define what packages you want to use
 Devvit.configure({
@@ -134,6 +135,33 @@ Devvit.addMenuItem({
       context.scheduler.cancelJob(dailyPostJobID);
     }
 
+  },
+});
+
+Devvit.addTrigger({
+  // You can handle multiple events in a single addTrigger call
+  // or split them into separate .addTrigger() calls—your choice.
+  events: ['CommentDelete'],
+  onEvent: async (event, context) => {
+    try {
+      switch (event.type) {
+        case 'CommentDelete': {
+          // event.comment is the deleted comment
+          const commentID = event.commentId;  // e.g. t1_XXXX
+          const subreddit = event.subreddit?.name;
+          if (!subreddit) {
+            throw new Error(`Failed to delete comment with no subreddit ${event}`);
+          }
+
+          // Remove from your own DB/Redis
+          await handleCommentDelete(commentID, subreddit);
+
+          break;
+        }
+      }
+    } catch (err) {
+      console.error(`Error handling ${event.type} event: `, err);
+    }
   },
 });
 
